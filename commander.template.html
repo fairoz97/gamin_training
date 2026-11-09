@@ -139,7 +139,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 
   <section class="bottom">
     <div class="panel" style="--c:var(--green)">
-      <div class="phead"><span class="lbl">Weekly run miles · 16 weeks</span><span class="kv" id="wk-sum">—</span></div>
+      <div class="phead"><span class="lbl">Weekly run km · 16 weeks</span><span class="kv" id="wk-sum">—</span></div>
       <div class="weeks" id="weeks"></div>
     </div>
     <div class="panel" style="--c:var(--violet)">
@@ -156,6 +156,10 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 
 <script>
 const D = /*__DATA__*/null;
+if (!D) {
+  document.body.innerHTML = '<div style="font:16px/1.6 system-ui,sans-serif;padding:40px;max-width:640px;margin:0 auto;color:#ddd;background:#111;min-height:100vh"><b>This is the build template and has no data in it.</b><br>Open <b>commander.html</b> instead, or run <code>python build_commander.py</code> to regenerate it.</div>';
+  throw new Error('No data embedded: open commander.html, not commander.template.html');
+}
 
 const C = {green:'#39ff88',cyan:'#22e5ff',amber:'#ffb020',red:'#ff3b5c',violet:'#a66bff'};
 const DAY = 86400000;
@@ -222,7 +226,7 @@ const hrvH = hrvNight || hrvAll[hrvAll.length-1] || null;
 
 const sleeps = Object.values(sleepBy).sort((a,b)=>a.d<b.d?-1:1);
 const sleepL = sleeps[sleeps.length-1] || null;
-const sleepGap = sleepL ? Math.round((toMs(TODAY)-toMs(sleepL.d))/DAY) - 1 : null; // nights missing since last record
+const sleepGap = sleepL ? Math.round((toMs(TODAY)-toMs(sleepL.d))/DAY) : null; // nights missing since last record (sleep is dated by wake day)
 
 /* ---------- training load: fitness (42d) / fatigue (7d) / form ---------- */
 const loadBy = {}; D.activities.forEach(a => loadBy[a.date] = (loadBy[a.date]||0) + (a.load||0));
@@ -355,23 +359,23 @@ function drawFFF(){
 setReadout(fNow); drawFFF();
 let rz; addEventListener('resize', ()=>{ clearTimeout(rz); rz=setTimeout(drawFFF,120); });
 
-/* ---------- weekly run miles ---------- */
+/* ---------- weekly run km ---------- */
 (function(){
   const dow = new Date(toMs(TODAY)).getUTCDay();
   const monday = addDays(TODAY, -((dow+6)%7));
   const isRun = t => /run/.test(t||'');
   const wk = Array.from({length:16}, (_,i)=>{
     const start = addDays(monday, -7*(15-i)), end = addDays(start,6);
-    const mi = sum(D.activities.filter(a=>isRun(a.type) && a.date>=start && a.date<=end).map(a=>a.dist/1609.344));
-    return {start, mi, cur: i===15};
+    const km = sum(D.activities.filter(a=>isRun(a.type) && a.date>=start && a.date<=end).map(a=>a.dist/1000));
+    return {start, km, cur: i===15};
   });
-  const mx = Math.max(1, ...wk.map(w=>w.mi));
-  $('weeks').innerHTML = wk.map((w,i)=>`<div class="wk${w.cur?' cur':''}" title="Week of ${fmtD(w.start)}: ${w.mi.toFixed(1)} mi">
-      <div class="val${w.mi?'':' z'}">${w.mi?w.mi.toFixed(1):'0'}</div>
-      <div class="bar" style="height:${(w.mi/mx*82).toFixed(1)}%"></div>
+  const mx = Math.max(1, ...wk.map(w=>w.km));
+  $('weeks').innerHTML = wk.map((w,i)=>`<div class="wk${w.cur?' cur':''}" title="Week of ${fmtD(w.start)}: ${w.km.toFixed(1)} km">
+      <div class="val${w.km?'':' z'}">${w.km?w.km.toFixed(1):'0'}</div>
+      <div class="bar" style="height:${(w.km/mx*82).toFixed(1)}%"></div>
       ${(15-i)%5===0 || i===15 ? `<div class="wl">${fmtD(w.start)}</div>` : ''}</div>`).join('');
   const done = wk.slice(0,15);
-  $('wk-sum').innerHTML = `15-WK AVG <b style="color:${C.green}">${avg(done.map(w=>w.mi)).toFixed(1)}</b> · THIS WK <b style="color:${C.cyan}">${wk[15].mi.toFixed(1)}</b> mi`;
+  $('wk-sum').innerHTML = `15-WK AVG <b style="color:${C.green}">${avg(done.map(w=>w.km)).toFixed(1)}</b> · THIS WK <b style="color:${C.cyan}">${wk[15].km.toFixed(1)}</b> km`;
 })();
 
 /* ---------- activity log ---------- */
@@ -384,7 +388,7 @@ let rz; addEventListener('resize', ()=>{ clearTimeout(rz); rz=setTimeout(drawFFF
     const [lab,col] = T[a.type] || [(a.type||'ACT').slice(0,4).toUpperCase(), C.cyan];
     return `<div class="row"><span class="d">${fmtD(a.date)}</span><span class="chip" style="--k:${col}">${lab}</span>
       <span class="n" title="${(a.name||'').replace(/"/g,'&quot;')}">${a.name||'—'}</span>
-      <span class="r">${a.dist>0?(a.dist/1609.344).toFixed(2)+' mi':'—'}</span><span class="r">${dur(a.dur)}</span>
+      <span class="r">${a.dist>0?(a.dist/1000).toFixed(2)+' km':'—'}</span><span class="r">${dur(a.dur)}</span>
       <span class="r" style="color:${C.amber}">${a.load!=null?Math.round(a.load):'—'}</span></div>`; }).join('');
   $('log').innerHTML = `<div class="row h"><span>DATE</span><span>TYPE</span><span>NAME</span><span class="r">DIST</span><span class="r">TIME</span><span class="r">LOAD</span></div>` + rows;
 })();
@@ -428,9 +432,12 @@ let rz; addEventListener('resize', ()=>{ clearTimeout(rz); rz=setTimeout(drawFFF
 /* ---------- refresh button (needs: python serve.py) ---------- */
 (function(){
   const btn = $('refresh'), st = $('rstat'), local = location.protocol === 'file:';
+  const dev = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  if (!local && !dev){ btn.textContent = '↻ RELOAD'; btn.title = 'Reload the latest published data'; }
   if (local) btn.title = 'Run "python serve.py" and open http://127.0.0.1:8765 to enable refresh';
   btn.addEventListener('click', async () => {
     if (local){ st.textContent = 'START: python serve.py'; return; }
+    if (!dev){ location.reload(); return; }
     btn.disabled = true; btn.classList.remove('err'); btn.textContent = 'PULLING…'; st.textContent = '0s';
     const t0 = Date.now(), tick = setInterval(() => { st.textContent = Math.round((Date.now()-t0)/1000) + 's'; }, 1000);
     try {

@@ -163,7 +163,7 @@ th.num{padding-right:14px}
     <section class="card" style="margin-bottom:16px">
       <h2>Weekly volume <span>last 10 weeks</span></h2>
       <div class="row2 rV" style="margin:0">
-        <div><div class="vsub" style="margin:0 0 6px"><b>Run miles</b> · <span id="rm-sub"></span></div><div class="bars" id="miles"></div></div>
+        <div><div class="vsub" style="margin:0 0 6px"><b>Run km</b> · <span id="rm-sub"></span></div><div class="bars" id="km"></div></div>
         <div><div class="vsub" style="margin:0 0 6px"><b>Training hours</b> · <span id="hr-sub"></span></div><div class="bars" id="hours"></div></div>
       </div>
     </section>
@@ -184,6 +184,10 @@ th.num{padding-right:14px}
 
 <script>
 const D = /*__DATA__*/null;
+if (!D) {
+  document.body.innerHTML = '<div style="font:16px/1.6 system-ui,sans-serif;padding:40px;max-width:640px;margin:0 auto;color:#ddd;background:#111;min-height:100vh"><b>This is the build template and has no data in it.</b><br>Open <b>coach.html</b> instead, or run <code>python build_coach.py</code> to regenerate it.</div>';
+  throw new Error('No data embedded: open coach.html, not coach.template.html');
+}
 
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DAY = 86400000;
@@ -347,7 +351,7 @@ $('send').onclick = async () => {
     const start = addDays(monday, -7*(9-i)), end = addDays(start,6);
     const acts = D.activities.filter(a=>a.date>=start && a.date<=end);
     return {start,
-      mi: sum(acts.filter(a=>/run/.test(a.type||'')).map(a=>a.dist/1609.344)),
+      km: sum(acts.filter(a=>/run/.test(a.type||'')).map(a=>a.dist/1000)),
       hr: sum(acts.map(a=>a.dur))/3600};
   });
   const draw = (id, key, color, fmt) => {
@@ -359,9 +363,9 @@ $('send').onclick = async () => {
     const done = vals.slice(0,9);
     return {avg: avg(done), cur: vals[9]};
   };
-  const m = draw('miles','mi','#2563eb', v=>v.toFixed(1));
+  const m = draw('km','km','#2563eb', v=>v.toFixed(1));
   const h = draw('hours','hr','#6366f1', v=>v.toFixed(1));
-  $('rm-sub').innerHTML = `9-wk avg <b>${m.avg.toFixed(1)}</b> · this week <b>${m.cur.toFixed(1)}</b>`;
+  $('rm-sub').innerHTML = `9-wk avg <b>${m.avg.toFixed(1)}</b> · this week <b>${m.cur.toFixed(1)}</b> km`;
   $('hr-sub').innerHTML = `9-wk avg <b>${h.avg.toFixed(1)}</b> · this week <b>${h.cur.toFixed(1)}</b> h`;
 })();
 
@@ -378,7 +382,7 @@ $('send').onclick = async () => {
     const te = pretty(a.te);
     return `<tr><td class="mut">${fmtD(a.date)}</td>
       <td class="n"><span class="chip" style="--k:${col}">${lab}</span>${esc(a.name)}</td>
-      <td class="num">${a.dist>0 ? (a.dist/1609.344).toFixed(2)+' mi' : dur(a.dur)}</td>
+      <td class="num">${a.dist>0 ? (a.dist/1000).toFixed(2)+' km' : dur(a.dur)}</td>
       <td class="num">${a.hr ? Math.round(a.hr)+' bpm' : '—'}</td>
       <td class="te">${te ? `<b>${te}</b>${a.ate!=null?` <span class="mut">${a.ate.toFixed(1)}</span>`:''}` : '<span class="mut">—</span>'}</td></tr>`;
   }).join('');

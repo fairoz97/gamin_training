@@ -7,6 +7,8 @@ import argparse
 import json
 from pathlib import Path
 
+from widget import inject
+
 HERE = Path(__file__).resolve().parent
 
 
@@ -41,7 +43,7 @@ def main():
 
     payload = json.dumps({"fetched": raw.get("fetched_at"), "runs": runs}, separators=(",", ":")).replace("</", "<\\/")
     tpl = (HERE / "tinkerer.template.html").read_text()
-    Path(a.out).write_text(tpl.replace("/*__DATA__*/null", payload))
+    Path(a.out).write_text(inject(tpl.replace("/*__DATA__*/null", payload)))
     print(f"Wrote {a.out}: {len(runs)} runs ({Path(a.out).stat().st_size/1024:.0f} KB)")
 
 

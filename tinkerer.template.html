@@ -87,8 +87,8 @@ input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 0}
       <select id="xsel"><option value="hr">Avg HR</option><option value="dist">Distance</option><option value="date">Date</option></select></label>
     <label class="ctl">Y axis
       <select id="ysel"><option value="pace">Pace</option><option value="hr">Avg HR</option></select></label>
-    <label class="ctl slider"><span>Minimum distance <b id="minlbl">0.0 mi</b></span>
-      <input type="range" id="minmi" min="0" max="11" step="0.5" value="0"></label>
+    <label class="ctl slider"><span>Minimum distance <b id="minlbl">0.0 km</b></span>
+      <input type="range" id="minkm" min="0" max="18" step="0.5" value="0"></label>
     <div class="ctl count" id="count"></div>
   </div>
 
@@ -111,12 +111,12 @@ const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','
 const YEAR_COLORS = ['#38bdf8','#f472b6','#facc15','#34d399','#a78bfa','#fb923c','#f87171','#2dd4bf'];
 
 const RUNS = D.runs.map(r => {
-  const mi = r.dist/1609.344;
-  return {...r, mi, pace: r.dur/60/mi, ts: Date.parse(r.start.replace(' ','T')+'Z'), year: +r.date.slice(0,4)};
+  const km = r.dist/1000;
+  return {...r, km, pace: r.dur/60/km, ts: Date.parse(r.start.replace(' ','T')+'Z'), year: +r.date.slice(0,4)};
 });
 const YEARS = [...new Set(RUNS.map(r=>r.year))].sort();
 const yc = y => YEAR_COLORS[YEARS.indexOf(y) % YEAR_COLORS.length];
-const MAXMI = Math.max(...RUNS.map(r=>r.mi));
+const MAXKM = Math.max(...RUNS.map(r=>r.km));
 
 /* ---------- formatting ---------- */
 const fmtPace = p => { let m=Math.floor(p), s=Math.round((p-m)*60); if (s===60){m++;s=0} return `${m}:${String(s).padStart(2,'0')}`; };
@@ -128,9 +128,9 @@ const prettyTE = s => { if (!s || s==='UNKNOWN') return null; s = s.replace(/_/g
 /* ---------- axes ---------- */
 const AX = {
   hr:   {label:'Avg HR (bpm)',            get:r=>r.hr,   tick:v=>String(Math.round(v)), tip:v=>Math.round(v)+' bpm'},
-  dist: {label:'Distance (mi)',           get:r=>r.mi,   tick:v=>String(+v.toFixed(1)), tip:v=>v.toFixed(2)+' mi'},
+  dist: {label:'Distance (km)',           get:r=>r.km,   tick:v=>String(+v.toFixed(1)), tip:v=>v.toFixed(2)+' km'},
   date: {label:'Date',                    get:r=>r.ts,   kind:'date'},
-  pace: {label:'Pace (min/mi) · faster ↑', get:r=>r.pace, tick:fmtPace, tip:v=>fmtPace(v)+' /mi', invert:true},
+  pace: {label:'Pace (min/km) · faster ↑', get:r=>r.pace, tick:fmtPace, tip:v=>fmtPace(v)+' /km', invert:true},
 };
 const domCache = {};
 function domain(key){
@@ -155,14 +155,14 @@ function monthTicks(lo, hi){
 const dateLabel = (t,i) => { const d=new Date(t), m=MON[d.getUTCMonth()]; return (i===0||d.getUTCMonth()===0) ? `${m} ${d.getUTCFullYear()}` : m; };
 
 /* ---------- state ---------- */
-const state = {x:'hr', y:'pace', years:new Set(YEARS), minMi:0, sel:null};
+const state = {x:'hr', y:'pace', years:new Set(YEARS), minKm:0, sel:null};
 (function initSel(){
-  const big = RUNS.filter(r=>r.mi>=10);
+  const big = RUNS.filter(r=>r.km>=16.09);   // "10+ mile" long runs (10 mi = 16.09 km)
   state.sel = (big.length ? big.reduce((a,b)=>b.pace<a.pace?b:a)
-                          : RUNS.reduce((a,b)=>b.mi>a.mi?b:a)).id;
+                          : RUNS.reduce((a,b)=>b.km>a.km?b:a)).id;
 })();
 const byId = id => RUNS.find(r=>r.id===id);
-const rOf = mi => 3.5 + 11*Math.sqrt(mi/MAXMI);
+const rOf = km => 3.5 + 11*Math.sqrt(km/MAXKM);
 
 /* ---------- controls ---------- */
 $('sub').textContent = `${RUNS.length} runs · ${YEARS.join(', ')}`;
@@ -172,8 +172,8 @@ $('chips').addEventListener('click', e=>{
   const y = +b.dataset.y; state.years.has(y) ? state.years.delete(y) : state.years.add(y);
   b.setAttribute('aria-pressed', state.years.has(y)); draw();
 });
-$('minmi').max = Math.ceil(MAXMI);
-$('minmi').addEventListener('input', e=>{ state.minMi = +e.target.value; $('minlbl').textContent = state.minMi.toFixed(1)+' mi'; draw(); });
+$('minkm').max = Math.ceil(MAXKM);
+$('minkm').addEventListener('input', e=>{ state.minKm = +e.target.value; $('minlbl').textContent = state.minKm.toFixed(1)+' km'; draw(); });
 function syncSelects(){
   [...$('xsel').options].forEach(o=>o.disabled = (o.value==='hr' && state.y==='hr'));
   [...$('ysel').options].forEach(o=>o.disabled = (o.value==='hr' && state.x==='hr'));
@@ -191,8 +191,8 @@ function draw(){
   const px = v => m.l + (v-xd[0])/(xd[1]-xd[0])*pw;
   const py = v => Y.invert ? m.t + (v-yd[0])/(yd[1]-yd[0])*ph : m.t + (yd[1]-v)/(yd[1]-yd[0])*ph;
 
-  visible = RUNS.filter(r=>state.years.has(r.year) && r.mi>=state.minMi && X.get(r)!=null && Y.get(r)!=null);
-  const total = RUNS.filter(r=>state.years.has(r.year) && r.mi>=state.minMi).length;
+  visible = RUNS.filter(r=>state.years.has(r.year) && r.km>=state.minKm && X.get(r)!=null && Y.get(r)!=null);
+  const total = RUNS.filter(r=>state.years.has(r.year) && r.km>=state.minKm).length;
   $('count').innerHTML = `Showing <b>${visible.length}</b> of ${RUNS.length} runs` + (total>visible.length?`<br>${total-visible.length} lack data for these axes`:'');
 
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="ui-sans-serif,system-ui,sans-serif">`;
@@ -210,20 +210,20 @@ function draw(){
   s += `<text transform="translate(16 ${m.t+ph/2}) rotate(-90)" text-anchor="middle" font-size="12" fill="#a9b8cc">${Y.label}</text>`;
 
   // dots: big first so small ones stay clickable on top
-  visible.slice().sort((a,b)=>b.mi-a.mi).forEach(r=>{
+  visible.slice().sort((a,b)=>b.km-a.km).forEach(r=>{
     const c = yc(r.year);
-    s += `<circle data-id="${r.id}" tabindex="0" role="button" aria-label="${esc(r.name)}, ${r.date}, ${r.mi.toFixed(1)} miles, pace ${fmtPace(r.pace)}"
-      cx="${px(X.get(r)).toFixed(1)}" cy="${py(Y.get(r)).toFixed(1)}" r="${rOf(r.mi).toFixed(1)}" fill="${c}" fill-opacity=".72" stroke="${c}" stroke-opacity=".95"/>`;
+    s += `<circle data-id="${r.id}" tabindex="0" role="button" aria-label="${esc(r.name)}, ${r.date}, ${r.km.toFixed(1)} kilometres, pace ${fmtPace(r.pace)}"
+      cx="${px(X.get(r)).toFixed(1)}" cy="${py(Y.get(r)).toFixed(1)}" r="${rOf(r.km).toFixed(1)}" fill="${c}" fill-opacity=".72" stroke="${c}" stroke-opacity=".95"/>`;
   });
   // selected ring
   const sel = byId(state.sel);
   if (sel && visible.includes(sel))
-    s += `<circle cx="${px(X.get(sel)).toFixed(1)}" cy="${py(Y.get(sel)).toFixed(1)}" r="${(rOf(sel.mi)+4).toFixed(1)}" fill="none" stroke="#fff" stroke-width="2.5" pointer-events="none" style="filter:drop-shadow(0 0 6px rgba(255,255,255,.7))"/>`;
+    s += `<circle cx="${px(X.get(sel)).toFixed(1)}" cy="${py(Y.get(sel)).toFixed(1)}" r="${(rOf(sel.km)+4).toFixed(1)}" fill="none" stroke="#fff" stroke-width="2.5" pointer-events="none" style="filter:drop-shadow(0 0 6px rgba(255,255,255,.7))"/>`;
   // size legend
-  const lg = [3, 6, 10].filter(v=>v<=MAXMI+0.5); let lx = W-m.r-12;
+  const lg = [5, 10, 15].filter(v=>v<=MAXKM+1); let lx = W-m.r-12;
   s += `<g font-size="11" fill="#8da0b8" text-anchor="end">`;
   lg.slice().reverse().forEach(v=>{ const r=rOf(v); lx -= r; s += `<circle cx="${lx}" cy="${H-m.b-r-8}" r="${r}" fill="none" stroke="#5b6c84"/><text x="${lx+r}" y="${H-m.b-2*r-12}" ${''}text-anchor="end" style="display:none">${v}</text>`; lx -= r+8; });
-  s += `<text x="${lx}" y="${H-m.b-14}" text-anchor="end">dot size = distance (3 · 6 · 10 mi)</text></g>`;
+  s += `<text x="${lx}" y="${H-m.b-14}" text-anchor="end">dot size = distance (5 · 10 · 15 km)</text></g>`;
   box.innerHTML = s + '</svg>';
   renderPanel();
 }
@@ -235,7 +235,7 @@ plot.addEventListener('pointermove', e=>{
   const c = dotOf(e);
   if (!c){ tip.style.opacity = 0; return; }
   const r = byId(+c.dataset.id), box = plot.getBoundingClientRect();
-  tip.innerHTML = `<b>${esc(r.name)}</b><span>${fmtDate(r)}</span><br>${r.mi.toFixed(2)} mi · ${fmtPace(r.pace)} /mi · ${r.hr!=null?Math.round(r.hr)+' bpm':'no HR'}`;
+  tip.innerHTML = `<b>${esc(r.name)}</b><span>${fmtDate(r)}</span><br>${r.km.toFixed(2)} km · ${fmtPace(r.pace)} /km · ${r.hr!=null?Math.round(r.hr)+' bpm':'no HR'}`;
   let x = e.clientX-box.left, y = e.clientY-box.top;
   tip.style.left = Math.min(x, box.width-230)+'px'; tip.style.top = y+'px'; tip.style.opacity = 1;
 });
@@ -265,8 +265,8 @@ function renderPanel(){
     <div class="when">${fmtDate(r)}</div>
     ${hidden ? '<div class="hidden" style="display:block">Not shown on the chart: hidden by the current filters or axes.</div>' : ''}
     <div class="stats">
-      <div class="stat"><div class="k">Distance</div><div class="v">${r.mi.toFixed(2)}<small>mi</small></div></div>
-      <div class="stat"><div class="k">Pace</div><div class="v">${fmtPace(r.pace)}<small>/mi</small></div></div>
+      <div class="stat"><div class="k">Distance</div><div class="v">${r.km.toFixed(2)}<small>km</small></div></div>
+      <div class="stat"><div class="k">Pace</div><div class="v">${fmtPace(r.pace)}<small>/km</small></div></div>
       <div class="stat"><div class="k">Avg HR</div><div class="v">${r.hr!=null?Math.round(r.hr):'—'}<small>bpm</small></div></div>
       <div class="stat"><div class="k">Time</div><div class="v">${fmtDur(r.dur)}</div></div>
     </div>

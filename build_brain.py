@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from build_commander import build
+from widget import inject
 
 HERE = Path(__file__).resolve().parent
 
@@ -28,7 +29,7 @@ def main():
 
     payload = json.dumps(d, separators=(",", ":")).replace("</", "<\\/")
     tpl = (HERE / "brain.template.html").read_text()
-    Path(a.out).write_text(tpl.replace("/*__DATA__*/null", payload))
+    Path(a.out).write_text(inject(tpl.replace("/*__DATA__*/null", payload)))
     print(f"Wrote {a.out} ({Path(a.out).stat().st_size/1024:.0f} KB)")
 
 
