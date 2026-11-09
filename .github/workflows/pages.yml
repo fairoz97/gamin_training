@@ -28,6 +28,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Check the repo has every file
+        run: |
+          missing=0
+          for f in pull.py build_all.py build_commander.py build_coach.py build_tinkerer.py build_brain.py \
+                   publish_site.py widget.py index.html commander.template.html coach.template.html \
+                   tinkerer.template.html brain.template.html; do
+            if [ ! -f "$f" ]; then echo "MISSING FROM REPO: $f"; missing=1; fi
+          done
+          exit $missing
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
