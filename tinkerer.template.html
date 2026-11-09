@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Run explorer</title>
+<style>
+:root{
+  --bg:#0b1220; --panel:#111a2b; --panel2:#0e1626; --line:#1f2c42; --text:#e6edf7; --mut:#8da0b8; --faint:#5b6c84;
+  --accent:#38bdf8;
+  --z1:#94a3b8; --z2:#60a5fa; --z3:#34d399; --z4:#fbbf24; --z5:#f87171;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--sans)}
+.wrap{max-width:1360px;margin:0 auto;padding:20px 22px 36px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin-bottom:14px}
+h1{margin:0;font-size:20px;letter-spacing:.01em}
+h1 small{font-size:12px;font-weight:500;color:var(--mut);margin-left:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="false"]{color:var(--faint);background:transparent}
+.chip[aria-pressed="false"] i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--faint)}
+.chip:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;padding:12px 14px;margin-bottom:14px;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.ctl{display:flex;flex-direction:column;gap:5px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+select{font:inherit;font-size:14px;letter-spacing:0;text-transform:none;color:var(--text);background:var(--panel2);
+  border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:150px}
+.ctl.slider{flex:1;min-width:220px}
+.ctl.slider b{color:var(--text);letter-spacing:0;text-transform:none;font-size:13px;font-weight:600;margin-left:6px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 0}
+.ctl.count{display:block;margin-left:auto;font-size:12px;color:var(--mut);text-align:right;letter-spacing:0;text-transform:none}
+.ctl.count b{color:var(--text)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.plotcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 8px 6px;position:relative}
+#plot{position:relative;width:100%}
+#plot svg{display:block;width:100%;height:auto;overflow:visible}
+#plot circle[data-id]{cursor:pointer;outline:none}
+#plot circle[data-id]:hover,#plot circle[data-id]:focus{stroke:#fff;stroke-width:2}
+.tip{position:absolute;z-index:3;pointer-events:none;background:#050a14;border:1px solid #2a3a55;border-radius:8px;padding:8px 10px;
+  font-size:12px;line-height:1.4;white-space:nowrap;opacity:0;transform:translate(12px,12px);transition:opacity .08s}
+.tip b{display:block;font-size:13px}
+.tip span{color:var(--mut)}
+
+.side{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:18px;position:sticky;top:14px}
+.side h2{margin:0;font-size:18px;line-height:1.25}
+.side .when{color:var(--mut);font-size:13px;margin-top:3px}
+.hidden{display:none;margin-top:8px;font-size:12px;color:#fbbf24}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.stat .v{font-size:22px;font-weight:700;margin-top:2px;line-height:1.15}
+.stat .v small{font-size:12px;font-weight:500;color:var(--mut);margin-left:3px}
+.te{margin:0 0 16px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.te .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);width:100%}
+.te .v{font-size:16px;font-weight:700}
+.te .n{color:var(--mut)}
+.zh{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.zbar{display:flex;height:28px;border-radius:7px;overflow:hidden;background:var(--panel2)}
+.zbar div{display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b1220;min-width:0;overflow:hidden}
+.zrows{margin-top:10px;display:grid;gap:6px}
+.zr{display:grid;grid-template-columns:12px 1fr auto 42px;gap:8px;align-items:center;font-size:12px}
+.zr i{width:10px;height:10px;border-radius:3px}
+.zr .t{color:var(--text);font-variant-numeric:tabular-nums}
+.zr .p{color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+.nozones{color:var(--mut);font-size:13px}
+.foot{margin-top:12px;font-size:12px;color:var(--faint)}
+
+@media (max-width:980px){.layout{grid-template-columns:1fr}.side{position:static}.chips{margin-left:0}.count{margin-left:0;text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Run explorer <small id="sub"></small></h1>
+    <div class="chips" id="chips" role="group" aria-label="Years"></div>
+  </header>
+
+  <div class="controls">
+    <label class="ctl">X axis
+      <select id="xsel"><option value="hr">Avg HR</option><option value="dist">Distance</option><option value="date">Date</option></select></label>
+    <label class="ctl">Y axis
+      <select id="ysel"><option value="pace">Pace</option><option value="hr">Avg HR</option></select></label>
+    <label class="ctl slider"><span>Minimum distance <b id="minlbl">0.0 mi</b></span>
+      <input type="range" id="minmi" min="0" max="11" step="0.5" value="0"></label>
+    <div class="ctl count" id="count"></div>
+  </div>
+
+  <div class="layout">
+    <div class="plotcard"><div id="plot"></div><div class="tip" id="tip"></div></div>
+    <aside class="side" id="side"></aside>
+  </div>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+if (!D) {
+  document.body.innerHTML = '<div style="font:16px/1.6 system-ui,sans-serif;padding:40px;max-width:640px;margin:0 auto;color:#ddd;background:#111;min-height:100vh"><b>This is the build template and has no data in it.</b><br>Open <b>tinkerer.html</b> instead, or run <code>python build_tinkerer.py</code> to regenerate it.</div>';
+  throw new Error('No data embedded: open tinkerer.html, not tinkerer.template.html');
+}
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEAR_COLORS = ['#38bdf8','#f472b6','#facc15','#34d399','#a78bfa','#fb923c','#f87171','#2dd4bf'];
+
+const RUNS = D.runs.map(r => {
+  const mi = r.dist/1609.344;
+  return {...r, mi, pace: r.dur/60/mi, ts: Date.parse(r.start.replace(' ','T')+'Z'), year: +r.date.slice(0,4)};
+});
+const YEARS = [...new Set(RUNS.map(r=>r.year))].sort();
+const yc = y => YEAR_COLORS[YEARS.indexOf(y) % YEAR_COLORS.length];
+const MAXMI = Math.max(...RUNS.map(r=>r.mi));
+
+/* ---------- formatting ---------- */
+const fmtPace = p => { let m=Math.floor(p), s=Math.round((p-m)*60); if (s===60){m++;s=0} return `${m}:${String(s).padStart(2,'0')}`; };
+const fmtDur = s => { s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`; };
+const fmtDate = r => new Date(r.ts).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}) + ' · ' + r.start.slice(11,16);
+const prettyTE = s => { if (!s || s==='UNKNOWN') return null; s = s.replace(/_/g,' ').toLowerCase().replace('vo2max','VO2 max'); return s[0].toUpperCase()+s.slice(1); };
+
+/* ---------- axes ---------- */
+const AX = {
+  hr:   {label:'Avg HR (bpm)',            get:r=>r.hr,   tick:v=>String(Math.round(v)), tip:v=>Math.round(v)+' bpm'},
+  dist: {label:'Distance (mi)',           get:r=>r.mi,   tick:v=>String(+v.toFixed(1)), tip:v=>v.toFixed(2)+' mi'},
+  date: {label:'Date',                    get:r=>r.ts,   kind:'date'},
+  pace: {label:'Pace (min/mi) · faster ↑', get:r=>r.pace, tick:fmtPace, tip:v=>fmtPace(v)+' /mi', invert:true},
+};
+const domCache = {};
+function domain(key){
+  if (domCache[key]) return domCache[key];
+  const v = RUNS.map(AX[key].get).filter(x=>x!=null);
+  let lo = Math.min(...v), hi = Math.max(...v);
+  if (lo===hi){ lo-=1; hi+=1; }
+  const pad = (hi-lo)*0.05;
+  return domCache[key] = [lo-pad, hi+pad];
+}
+function niceTicks(lo, hi, target){
+  const raw = (hi-lo)/target, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1,2,2.5,5,10].map(m=>m*p).find(s=>s>=raw) || p*10;
+  const out = []; for (let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(6));
+  return out;
+}
+function monthTicks(lo, hi){
+  const out = []; const d = new Date(lo); let y = d.getUTCFullYear(), m = d.getUTCMonth()+1;
+  for (;;){ const t = Date.UTC(y,m,1); if (t>hi) break; out.push(t); if (++m>11){m=0;y++} }
+  return out;
+}
+const dateLabel = (t,i) => { const d=new Date(t), m=MON[d.getUTCMonth()]; return (i===0||d.getUTCMonth()===0) ? `${m} ${d.getUTCFullYear()}` : m; };
+
+/* ---------- state ---------- */
+const state = {x:'hr', y:'pace', years:new Set(YEARS), minMi:0, sel:null};
+(function initSel(){
+  const big = RUNS.filter(r=>r.mi>=10);
+  state.sel = (big.length ? big.reduce((a,b)=>b.pace<a.pace?b:a)
+                          : RUNS.reduce((a,b)=>b.mi>a.mi?b:a)).id;
+})();
+const byId = id => RUNS.find(r=>r.id===id);
+const rOf = mi => 3.5 + 11*Math.sqrt(mi/MAXMI);
+
+/* ---------- controls ---------- */
+$('sub').textContent = `${RUNS.length} runs · ${YEARS.join(', ')}`;
+$('chips').innerHTML = YEARS.map(y=>`<button class="chip" type="button" data-y="${y}" aria-pressed="true" style="--c:${yc(y)}"><i></i>${y}</button>`).join('');
+$('chips').addEventListener('click', e=>{
+  const b = e.target.closest('.chip'); if (!b) return;
+  const y = +b.dataset.y; state.years.has(y) ? state.years.delete(y) : state.years.add(y);
+  b.setAttribute('aria-pressed', state.years.has(y)); draw();
+});
+$('minmi').max = Math.ceil(MAXMI);
+$('minmi').addEventListener('input', e=>{ state.minMi = +e.target.value; $('minlbl').textContent = state.minMi.toFixed(1)+' mi'; draw(); });
+function syncSelects(){
+  [...$('xsel').options].forEach(o=>o.disabled = (o.value==='hr' && state.y==='hr'));
+  [...$('ysel').options].forEach(o=>o.disabled = (o.value==='hr' && state.x==='hr'));
+}
+$('xsel').addEventListener('change', e=>{ state.x = e.target.value; if (state.x==='hr' && state.y==='hr'){ state.y='pace'; $('ysel').value='pace'; } syncSelects(); draw(); });
+$('ysel').addEventListener('change', e=>{ state.y = e.target.value; if (state.y==='hr' && state.x==='hr'){ state.x='dist'; $('xsel').value='dist'; } syncSelects(); draw(); });
+syncSelects();
+
+/* ---------- plot ---------- */
+let visible = [];
+function draw(){
+  const box = $('plot'), W = Math.max(320, box.clientWidth), H = Math.round(Math.min(640, Math.max(380, W*0.56)));
+  const m = {l:70, r:22, t:16, b:60}, pw = W-m.l-m.r, ph = H-m.t-m.b;
+  const X = AX[state.x], Y = AX[state.y], xd = domain(state.x), yd = domain(state.y);
+  const px = v => m.l + (v-xd[0])/(xd[1]-xd[0])*pw;
+  const py = v => Y.invert ? m.t + (v-yd[0])/(yd[1]-yd[0])*ph : m.t + (yd[1]-v)/(yd[1]-yd[0])*ph;
+
+  visible = RUNS.filter(r=>state.years.has(r.year) && r.mi>=state.minMi && X.get(r)!=null && Y.get(r)!=null);
+  const total = RUNS.filter(r=>state.years.has(r.year) && r.mi>=state.minMi).length;
+  $('count').innerHTML = `Showing <b>${visible.length}</b> of ${RUNS.length} runs` + (total>visible.length?`<br>${total-visible.length} lack data for these axes`:'');
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="ui-sans-serif,system-ui,sans-serif">`;
+  // gridlines + ticks
+  const xt = X.kind==='date' ? monthTicks(xd[0],xd[1]) : niceTicks(xd[0],xd[1],Math.max(4,Math.round(pw/110)));
+  const yt = niceTicks(yd[0],yd[1],Math.max(4,Math.round(ph/62)));
+  xt.forEach((t,i)=>{ const x=px(t);
+    s += `<line x1="${x}" x2="${x}" y1="${m.t}" y2="${H-m.b}" stroke="#1a2740"/>`;
+    s += `<text x="${x}" y="${H-m.b+18}" text-anchor="middle" font-size="11" fill="#8da0b8">${X.kind==='date'?dateLabel(t,i):X.tick(t)}</text>`; });
+  yt.forEach(t=>{ const y=py(t);
+    s += `<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#1a2740"/>`;
+    s += `<text x="${m.l-9}" y="${y+4}" text-anchor="end" font-size="11" fill="#8da0b8">${Y.tick(t)}</text>`; });
+  s += `<line x1="${m.l}" x2="${W-m.r}" y1="${H-m.b}" y2="${H-m.b}" stroke="#2a3a55"/><line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${H-m.b}" stroke="#2a3a55"/>`;
+  s += `<text x="${m.l+pw/2}" y="${H-10}" text-anchor="middle" font-size="12" fill="#a9b8cc">${X.label}</text>`;
+  s += `<text transform="translate(16 ${m.t+ph/2}) rotate(-90)" text-anchor="middle" font-size="12" fill="#a9b8cc">${Y.label}</text>`;
+
+  // dots: big first so small ones stay clickable on top
+  visible.slice().sort((a,b)=>b.mi-a.mi).forEach(r=>{
+    const c = yc(r.year);
+    s += `<circle data-id="${r.id}" tabindex="0" role="button" aria-label="${esc(r.name)}, ${r.date}, ${r.mi.toFixed(1)} miles, pace ${fmtPace(r.pace)}"
+      cx="${px(X.get(r)).toFixed(1)}" cy="${py(Y.get(r)).toFixed(1)}" r="${rOf(r.mi).toFixed(1)}" fill="${c}" fill-opacity=".72" stroke="${c}" stroke-opacity=".95"/>`;
+  });
+  // selected ring
+  const sel = byId(state.sel);
+  if (sel && visible.includes(sel))
+    s += `<circle cx="${px(X.get(sel)).toFixed(1)}" cy="${py(Y.get(sel)).toFixed(1)}" r="${(rOf(sel.mi)+4).toFixed(1)}" fill="none" stroke="#fff" stroke-width="2.5" pointer-events="none" style="filter:drop-shadow(0 0 6px rgba(255,255,255,.7))"/>`;
+  // size legend
+  const lg = [3, 6, 10].filter(v=>v<=MAXMI+0.5); let lx = W-m.r-12;
+  s += `<g font-size="11" fill="#8da0b8" text-anchor="end">`;
+  lg.slice().reverse().forEach(v=>{ const r=rOf(v); lx -= r; s += `<circle cx="${lx}" cy="${H-m.b-r-8}" r="${r}" fill="none" stroke="#5b6c84"/><text x="${lx+r}" y="${H-m.b-2*r-12}" ${''}text-anchor="end" style="display:none">${v}</text>`; lx -= r+8; });
+  s += `<text x="${lx}" y="${H-m.b-14}" text-anchor="end">dot size = distance (3 · 6 · 10 mi)</text></g>`;
+  box.innerHTML = s + '</svg>';
+  renderPanel();
+}
+
+/* ---------- tooltip + selection ---------- */
+const tip = $('tip'), plot = $('plot');
+const dotOf = e => e.target.closest && e.target.closest('circle[data-id]');
+plot.addEventListener('pointermove', e=>{
+  const c = dotOf(e);
+  if (!c){ tip.style.opacity = 0; return; }
+  const r = byId(+c.dataset.id), box = plot.getBoundingClientRect();
+  tip.innerHTML = `<b>${esc(r.name)}</b><span>${fmtDate(r)}</span><br>${r.mi.toFixed(2)} mi · ${fmtPace(r.pace)} /mi · ${r.hr!=null?Math.round(r.hr)+' bpm':'no HR'}`;
+  let x = e.clientX-box.left, y = e.clientY-box.top;
+  tip.style.left = Math.min(x, box.width-230)+'px'; tip.style.top = y+'px'; tip.style.opacity = 1;
+});
+plot.addEventListener('pointerleave', ()=>tip.style.opacity = 0);
+plot.addEventListener('click', e=>{ const c = dotOf(e); if (c) select(+c.dataset.id); });
+plot.addEventListener('keydown', e=>{ if ((e.key==='Enter'||e.key===' ') && dotOf(e)){ e.preventDefault(); select(+dotOf(e).dataset.id); } });
+function select(id){
+  state.sel = id; draw();
+  const el = plot.querySelector(`circle[data-id="${id}"]`);
+  if (el && document.activeElement && document.activeElement.closest && document.activeElement.closest('#plot')) el.focus({preventScroll:true});
+}
+
+/* ---------- side panel ---------- */
+function renderPanel(){
+  const r = byId(state.sel), side = $('side');
+  if (!r){ side.innerHTML = '<div class="nozones">Click a dot to inspect a run.</div>'; return; }
+  const te = prettyTE(r.te), hidden = !visible.includes(r);
+  const ZN = ['Z1 Warm-up','Z2 Easy','Z3 Aerobic','Z4 Threshold','Z5 Max'];
+  let zones = '<div class="nozones">No heart-rate zone data for this run.</div>';
+  const tot = r.z ? r.z.reduce((a,v)=>a+(v||0),0) : 0;
+  if (tot > 0){
+    zones = `<div class="zbar">${r.z.map((v,i)=>{ const p=(v||0)/tot; return `<div style="width:${p*100}%;background:var(--z${i+1})" title="${ZN[i]}: ${fmtDur(v||0)}">${p>=0.08?Math.round(p*100)+'%':''}</div>`; }).join('')}</div>
+      <div class="zrows">${r.z.map((v,i)=>`<div class="zr"><i style="background:var(--z${i+1})"></i><span>${ZN[i]}</span><span class="t">${fmtDur(v||0)}</span><span class="p">${Math.round((v||0)/tot*100)}%</span></div>`).join('')}</div>`;
+  }
+  side.innerHTML = `
+    <h2>${esc(r.name)}</h2>
+    <div class="when">${fmtDate(r)}</div>
+    ${hidden ? '<div class="hidden" style="display:block">Not shown on the chart: hidden by the current filters or axes.</div>' : ''}
+    <div class="stats">
+      <div class="stat"><div class="k">Distance</div><div class="v">${r.mi.toFixed(2)}<small>mi</small></div></div>
+      <div class="stat"><div class="k">Pace</div><div class="v">${fmtPace(r.pace)}<small>/mi</small></div></div>
+      <div class="stat"><div class="k">Avg HR</div><div class="v">${r.hr!=null?Math.round(r.hr):'—'}<small>bpm</small></div></div>
+      <div class="stat"><div class="k">Time</div><div class="v">${fmtDur(r.dur)}</div></div>
+    </div>
+    <div class="te"><div class="k">Training effect</div>${te?`<span class="v">${te}</span>`:'<span class="v">—</span>'}${r.ate!=null?`<span class="n">aerobic ${r.ate.toFixed(1)}</span>`:''}</div>
+    <div class="zh">Time in HR zones</div>
+    ${zones}
+    <div class="foot">Pace is distance over total timer time, so pauses count against it.</div>`;
+}
+
+let rz; addEventListener('resize', ()=>{ clearTimeout(rz); rz = setTimeout(draw, 120); });
+draw();
+</script>
+</body>
+</html>

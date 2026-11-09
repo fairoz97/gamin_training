@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Run explorer</title>
+<style>
+:root{
+  --bg:#0b1220; --panel:#111a2b; --panel2:#0e1626; --line:#1f2c42; --text:#e6edf7; --mut:#8da0b8; --faint:#5b6c84;
+  --accent:#38bdf8;
+  --z1:#94a3b8; --z2:#60a5fa; --z3:#34d399; --z4:#fbbf24; --z5:#f87171;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--sans)}
+.wrap{max-width:1360px;margin:0 auto;padding:20px 22px 36px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin-bottom:14px}
+h1{margin:0;font-size:20px;letter-spacing:.01em}
+h1 small{font-size:12px;font-weight:500;color:var(--mut);margin-left:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="false"]{color:var(--faint);background:transparent}
+.chip[aria-pressed="false"] i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--faint)}
+.chip:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 22px;padding:12px 14px;margin-bottom:14px;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.ctl{display:flex;flex-direction:column;gap:5px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+select{font:inherit;font-size:14px;letter-spacing:0;text-transform:none;color:var(--text);background:var(--panel2);
+  border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:150px}
+.ctl.slider{flex:1;min-width:220px}
+.ctl.slider b{color:var(--text);letter-spacing:0;text-transform:none;font-size:13px;font-weight:600;margin-left:6px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 0}
+.ctl.count{display:block;margin-left:auto;font-size:12px;color:var(--mut);text-align:right;letter-spacing:0;text-transform:none}
+.ctl.count b{color:var(--text)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.plotcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 8px 6px;position:relative}
+#plot{position:relative;width:100%}
+#plot svg{display:block;width:100%;height:auto;overflow:visible}
+#plot circle[data-id]{cursor:pointer;outline:none}
+#plot circle[data-id]:hover,#plot circle[data-id]:focus{stroke:#fff;stroke-width:2}
+.tip{position:absolute;z-index:3;pointer-events:none;background:#050a14;border:1px solid #2a3a55;border-radius:8px;padding:8px 10px;
+  font-size:12px;line-height:1.4;white-space:nowrap;opacity:0;transform:translate(12px,12px);transition:opacity .08s}
+.tip b{display:block;font-size:13px}
+.tip span{color:var(--mut)}
+
+.side{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:18px;position:sticky;top:14px}
+.side h2{margin:0;font-size:18px;line-height:1.25}
+.side .when{color:var(--mut);font-size:13px;margin-top:3px}
+.hidden{display:none;margin-top:8px;font-size:12px;color:#fbbf24}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.stat .v{font-size:22px;font-weight:700;margin-top:2px;line-height:1.15}
+.stat .v small{font-size:12px;font-weight:500;color:var(--mut);margin-left:3px}
+.te{margin:0 0 16px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.te .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);width:100%}
+.te .v{font-size:16px;font-weight:700}
+.te .n{color:var(--mut)}
+.zh{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.zbar{display:flex;height:28px;border-radius:7px;overflow:hidden;background:var(--panel2)}
+.zbar div{display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b1220;min-width:0;overflow:hidden}
+.zrows{margin-top:10px;display:grid;gap:6px}
+.zr{display:grid;grid-template-columns:12px 1fr auto 42px;gap:8px;align-items:center;font-size:12px}
+.zr i{width:10px;height:10px;border-radius:3px}
+.zr .t{color:var(--text);font-variant-numeric:tabular-nums}
+.zr .p{color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+.nozones{color:var(--mut);font-size:13px}
+.foot{margin-top:12px;font-size:12px;color:var(--faint)}
+
+@media (max-width:980px){.layout{grid-template-columns:1fr}.side{position:static}.chips{margin-left:0}.count{margin-left:0;text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Run explorer <small id="sub"></small></h1>
+    <div class="chips" id="chips" role="group" aria-label="Years"></div>
+  </header>
+
+  <div class="controls">
+    <label class="ctl">X axis
+      <select id="xsel"><option value="hr">Avg HR</option><option value="dist">Distance</option><option value="date">Date</option></select></label>
+    <label class="ctl">Y axis
+      <select id="ysel"><option value="pace">Pace</option><option value="hr">Avg HR</option></select></label>
+    <label class="ctl slider"><span>Minimum distance <b id="minlbl">0.0 km</b></span>
+      <input type="range" id="minkm" min="0" max="18" step="0.5" value="0"></label>
+    <div class="ctl count" id="count"></div>
+  </div>
+
+  <div class="layout">
+    <div class="plotcard"><div id="plot"></div><div class="tip" id="tip"></div></div>
+    <aside class="side" id="side"></aside>
+  </div>
+</div>
+
+<script>
+const D = {"fetched":"2026-11-08T11:51:54.188356+00:00","runs":[{"id":22580852051,"name":"Singapore Running","type":"running","start":"2026-04-19 17:46:24","date":"2026-04-19","dist":6010.9599609375,"dur":2834.427001953125,"hr":162.0,"te":"TEMPO","ate":4.099999904632568,"z":[29.0,350.99,1757.973,613.265,0.0]},{"id":22647682991,"name":"Singapore Running","type":"running","start":"2026-04-25 07:30:17","date":"2026-04-25","dist":4006.760009765625,"dur":1568.4940185546875,"hr":177.0,"te":"VO2MAX","ate":3.5999999046325684,"z":[22.192,36.002,147.84,679.356,669.503]},{"id":22664221049,"name":"Singapore - Z2 - 50mins","type":"running","start":"2026-04-26 17:56:38","date":"2026-04-26","dist":6105.1298828125,"dur":3044.881103515625,"hr":157.0,"te":"AEROBIC_BASE","ate":2.5,"z":[17.888,914.137,2053.654,13.021,0.0]},{"id":22731596540,"name":"Singapore Running","type":"running","start":"2026-05-02 07:20:49","date":"2026-05-02","dist":4507.7001953125,"dur":1720.676025390625,"hr":177.0,"te":"VO2MAX","ate":3.700000047683716,"z":[30.0,185.553,139.002,1207.083,135.812]},{"id":22747994427,"name":"Singapore - Long Run","type":"running","start":"2026-05-03 17:56:05","date":"2026-05-03","dist":6704.509765625,"dur":3156.01904296875,"hr":159.0,"te":"AEROBIC_BASE","ate":3.0,"z":[153.984,486.521,2491.866,0.0,0.0]},{"id":22826122687,"name":"Singapore Running","type":"running","start":"2026-05-10 07:07:44","date":"2026-05-10","dist":6180.56982421875,"dur":3615.402099609375,"hr":145.0,"te":"AEROBIC_BASE","ate":2.0999999046325684,"z":[1258.982,2015.936,185.823,0.0,0.0]},{"id":22888637142,"name":"Singapore Running","type":"running","start":"2026-05-15 18:31:28","date":"2026-05-15","dist":5733.77978515625,"dur":3123.5458984375,"hr":140.0,"te":"AEROBIC_BASE","ate":2.299999952316284,"z":[2342.098,587.499,0.0,0.0,0.0]},{"id":22895035912,"name":"Singapore Running","type":"running","start":"2026-05-16 07:37:56","date":"2026-05-16","dist":3121.9599609375,"dur":1200.4930419921875,"hr":175.0,"te":"TEMPO","ate":3.299999952316284,"z":[50.938,88.618,315.222,733.138,0.0]},{"id":22906591593,"name":"Singapore Running","type":"running","start":"2026-05-17 07:24:50","date":"2026-05-17","dist":5008.47998046875,"dur":2280.909912109375,"hr":162.0,"te":"AEROBIC_BASE","ate":3.0,"z":[112.998,605.497,1544.815,1.0,0.0]},{"id":22935059595,"name":"Singapore Track Running","type":"track_running","start":"2026-05-19 19:16:21","date":"2026-05-19","dist":7240.0,"dur":3279.779052734375,"hr":171.0,"te":"ANAEROBIC_CAPACITY","ate":4.400000095367432,"z":[349.602,331.317,373.575,1038.648,960.401]},{"id":22993842695,"name":"Singapore Running","type":"running","start":"2026-05-24 18:10:05","date":"2026-05-24","dist":6149.22021484375,"dur":2880.423095703125,"hr":160.0,"te":"AEROBIC_BASE","ate":3.0,"z":[83.001,358.036,2394.517,0.0,0.0]},{"id":23018536508,"name":"Singapore Track Running","type":"track_running","start":"2026-05-26 19:07:19","date":"2026-05-26","dist":7490.0,"dur":3315.489013671875,"hr":171.0,"te":"VO2MAX","ate":4.300000190734863,"z":[276.084,287.311,556.996,1608.463,454.127]},{"id":23061339283,"name":"Singapore Running","type":"running","start":"2026-05-30 07:37:22","date":"2026-05-30","dist":3244.35009765625,"dur":1201.3780517578125,"hr":170.0,"te":"TEMPO","ate":3.200000047683716,"z":[13.145,100.22,340.346,699.953,0.0]},{"id":23102903920,"name":"Singapore Track Running","type":"track_running","start":"2026-06-02 19:17:58","date":"2026-06-02","dist":8400.0,"dur":3448.2060546875,"hr":168.0,"te":"VO2MAX","ate":4.400000095367432,"z":[276.85,457.645,423.998,1106.24,932.054]},{"id":23145173614,"name":"Singapore - Base","type":"running","start":"2026-06-06 07:25:45","date":"2026-06-06","dist":4434.10986328125,"dur":1921.666015625,"hr":161.0,"te":"TEMPO","ate":2.9000000953674316,"z":[65.567,381.996,1314.478,125.667,0.0]},{"id":23162083569,"name":"Singapore - Base","type":"running","start":"2026-06-07 18:15:53","date":"2026-06-07","dist":6067.919921875,"dur":2768.4560546875,"hr":158.0,"te":"AEROBIC_BASE","ate":2.799999952316284,"z":[141.995,642.771,1940.231,10.999,0.0]},{"id":23186441403,"name":"Singapore Track Running","type":"track_running","start":"2026-06-09 19:09:13","date":"2026-06-09","dist":5850.0,"dur":2423.801025390625,"hr":164.0,"te":"VO2MAX","ate":3.5999999046325684,"z":[379.872,204.402,398.986,945.214,284.547]},{"id":23244845495,"name":"Singapore - Base","type":"running","start":"2026-06-14 18:03:16","date":"2026-06-14","dist":7458.81982421875,"dur":3421.884033203125,"hr":157.0,"te":"AEROBIC_BASE","ate":2.799999952316284,"z":[194.714,758.775,2410.921,0.0,0.0]},{"id":23268843834,"name":"Singapore Track Running","type":"track_running","start":"2026-06-16 19:28:02","date":"2026-06-16","dist":6840.0,"dur":2644.419921875,"hr":170.0,"te":"VO2MAX","ate":3.9000000953674316,"z":[118.225,121.569,527.979,1422.388,296.166]},{"id":23311141252,"name":"Singapore Running","type":"running","start":"2026-06-20 07:27:20","date":"2026-06-20","dist":3302.0400390625,"dur":1334.342041015625,"hr":163.0,"te":"TEMPO","ate":3.0,"z":[36.001,162.0,957.513,150.81,0.0]},{"id":23323422055,"name":"Singapore Running","type":"running","start":"2026-06-21 07:52:36","date":"2026-06-21","dist":4826.18017578125,"dur":1710.43701171875,"hr":167.0,"te":"LACTATE_THRESHOLD","ate":3.5999999046325684,"z":[85.035,190.929,413.838,970.633,0.0]},{"id":23351372010,"name":"Singapore - 3x10mins Threshold","type":"track_running","start":"2026-06-23 19:22:38","date":"2026-06-23","dist":8790.0,"dur":3576.64111328125,"hr":163.0,"te":"LACTATE_THRESHOLD","ate":3.9000000953674316,"z":[131.321,906.76,1147.437,1297.84,0.0]},{"id":23406031419,"name":"Singapore Running","type":"running","start":"2026-06-28 17:19:01","date":"2026-06-28","dist":10009.7998046875,"dur":4568.537109375,"hr":159.0,"te":"TEMPO","ate":3.299999952316284,"z":[176.462,1009.382,3291.127,50.599,0.0]},{"id":23429212617,"name":"Singapore Track Running","type":"track_running","start":"2026-06-30 19:13:43","date":"2026-06-30","dist":6450.0,"dur":2741.032958984375,"hr":159.0,"te":"ANAEROBIC_CAPACITY","ate":3.4000000953674316,"z":[69.465,1128.557,922.556,376.785,139.801]},{"id":23486551789,"name":"Singapore - Base","type":"running","start":"2026-07-05 18:17:49","date":"2026-07-05","dist":6195.39013671875,"dur":2823.053955078125,"hr":156.0,"te":"AEROBIC_BASE","ate":2.700000047683716,"z":[226.336,828.697,1720.319,0.0,0.0]},{"id":23510213176,"name":"Singapore Track Running","type":"track_running","start":"2026-07-07 19:17:50","date":"2026-07-07","dist":8920.0,"dur":3772.68603515625,"hr":163.0,"te":"VO2MAX","ate":4.0,"z":[606.816,218.999,989.014,1430.195,234.376]},{"id":23553163030,"name":"Singapore Running","type":"running","start":"2026-07-11 07:29:27","date":"2026-07-11","dist":15092.1201171875,"dur":6099.00390625,"hr":168.0,"te":"LACTATE_THRESHOLD","ate":4.5,"z":[101.959,665.417,2260.012,2905.79,21.001]},{"id":23594111083,"name":"Singapore Track Running","type":"track_running","start":"2026-07-14 19:18:12","date":"2026-07-14","dist":8600.0,"dur":3559.739990234375,"hr":163.0,"te":"VO2MAX","ate":4.0,"z":[730.411,532.918,608.002,1283.073,306.052]},{"id":23636295494,"name":"Singapore Running","type":"running","start":"2026-07-18 08:15:12","date":"2026-07-18","dist":4005.06005859375,"dur":1781.7430419921875,"hr":158.0,"te":"AEROBIC_BASE","ate":2.5,"z":[132.0,375.979,1242.441,3.99,0.0]},{"id":23652810568,"name":"Singapore - Long Run","type":"running","start":"2026-07-19 18:21:52","date":"2026-07-19","dist":8761.0302734375,"dur":3961.511962890625,"hr":159.0,"te":"AEROBIC_BASE","ate":3.0999999046325684,"z":[84.965,895.621,2956.068,0.0,0.0]},{"id":23677119195,"name":"Singapore Track Running","type":"track_running","start":"2026-07-21 19:23:38","date":"2026-07-21","dist":8210.0,"dur":3317.037109375,"hr":160.0,"te":"LACTATE_THRESHOLD","ate":4.0,"z":[608.521,226.04,787.002,1349.93,36.003]},{"id":23701095655,"name":"Singapore Running","type":"running","start":"2026-07-23 17:43:01","date":"2026-07-23","dist":6005.60009765625,"dur":2598.800048828125,"hr":157.0,"te":"AEROBIC_BASE","ate":3.0,"z":[108.433,662.996,1796.306,0.0,0.0]},{"id":23738134479,"name":"Singapore Running","type":"running","start":"2026-07-26 17:52:36","date":"2026-07-26","dist":12007.9296875,"dur":5305.43701171875,"hr":160.0,"te":"TEMPO","ate":3.5,"z":[131.162,931.267,4194.026,6.0,0.0]},{"id":23762263803,"name":"Singapore Track Running","type":"track_running","start":"2026-07-28 19:17:13","date":"2026-07-28","dist":7700.0,"dur":3069.326904296875,"hr":160.0,"te":"VO2MAX","ate":3.799999952316284,"z":[744.128,224.0,798.89,1103.064,78.616]},{"id":23787029551,"name":"Singapore - Base","type":"running","start":"2026-07-30 18:04:52","date":"2026-07-30","dist":6010.4599609375,"dur":2665.751953125,"hr":152.0,"te":"AEROBIC_BASE","ate":2.700000047683716,"z":[251.531,1850.243,515.022,0.0,0.0]},{"id":23806070945,"name":"Singapore Running","type":"running","start":"2026-08-01 07:15:07","date":"2026-08-01","dist":5507.740234375,"dur":2471.672119140625,"hr":159.0,"te":"AEROBIC_BASE","ate":2.5999999046325684,"z":[27.0,667.412,1747.485,0.0,0.0]},{"id":23823106085,"name":"Singapore Running","type":"running","start":"2026-08-02 17:34:25","date":"2026-08-02","dist":12006.3095703125,"dur":5505.70703125,"hr":158.0,"te":"TEMPO","ate":3.200000047683716,"z":[183.304,1782.882,3507.096,0.0,0.0]},{"id":23848073411,"name":"Singapore Track Running","type":"track_running","start":"2026-08-04 19:06:40","date":"2026-08-04","dist":8140.0,"dur":3200.25,"hr":164.0,"te":"LACTATE_THRESHOLD","ate":4.099999904632568,"z":[543.978,96.099,754.998,1564.188,0.0]},{"id":23869387884,"name":"Treadmill Running","type":"treadmill_running","start":"2026-08-06 08:48:16","date":"2026-08-06","dist":6100.0,"dur":2822.1240234375,"hr":154.0,"te":"AEROBIC_BASE","ate":3.200000047683716,"z":[63.876,2023.956,688.928,0.0,0.0]},{"id":23910704760,"name":"Singapore Running","type":"running","start":"2026-08-09 18:05:53","date":"2026-08-09","dist":13006.759765625,"dur":5902.83203125,"hr":156.0,"te":"AEROBIC_BASE","ate":3.299999952316284,"z":[184.032,2574.889,3090.773,0.0,0.0]},{"id":23935776682,"name":"Singapore Track Running","type":"track_running","start":"2026-08-11 19:19:13","date":"2026-08-11","dist":8340.0,"dur":3446.64794921875,"hr":159.0,"te":"VO2MAX","ate":3.799999952316284,"z":[923.885,223.538,597.997,1156.165,230.716]},{"id":23960770624,"name":"Singapore Running","type":"running","start":"2026-08-13 18:12:57","date":"2026-08-13","dist":6010.22998046875,"dur":2688.5400390625,"hr":154.0,"te":"AEROBIC_BASE","ate":2.5999999046325684,"z":[155.0,1573.292,925.888,0.0,0.0]},{"id":23979915881,"name":"Singapore Running","type":"running","start":"2026-08-15 06:59:20","date":"2026-08-15","dist":6010.0498046875,"dur":2734.35595703125,"hr":157.0,"te":"AEROBIC_BASE","ate":2.5999999046325684,"z":[70.391,1014.906,1610.556,0.0,0.0]},{"id":23998290487,"name":"Singapore Running","type":"running","start":"2026-08-16 18:03:48","date":"2026-08-16","dist":13003.1201171875,"dur":5815.52490234375,"hr":157.0,"te":"AEROBIC_BASE","ate":3.200000047683716,"z":[263.282,2051.566,3401.166,0.0,0.0]},{"id":24022475782,"name":"Singapore Track Running","type":"track_running","start":"2026-08-18 19:21:26","date":"2026-08-18","dist":10200.0,"dur":4156.48583984375,"hr":160.0,"te":"VO2MAX","ate":4.099999904632568,"z":[1171.373,564.122,379.008,1537.289,314.998]},{"id":24047315961,"name":"Singapore Running","type":"running","start":"2026-08-20 18:18:24","date":"2026-08-20","dist":6003.64990234375,"dur":2688.903076171875,"hr":156.0,"te":"AEROBIC_BASE","ate":2.5999999046325684,"z":[175.999,1303.515,1179.451,0.0,0.0]},{"id":24066749969,"name":"Singapore Running","type":"running","start":"2026-08-22 06:50:22","date":"2026-08-22","dist":14008.740234375,"dur":6352.455078125,"hr":156.0,"te":"AEROBIC_BASE","ate":3.200000047683716,"z":[422.782,3440.554,2397.719,0.0,0.0]},{"id":24109550274,"name":"Singapore Track Running","type":"track_running","start":"2026-08-25 19:17:55","date":"2026-08-25","dist":7830.0,"dur":3280.716064453125,"hr":157.0,"te":"LACTATE_THRESHOLD","ate":3.799999952316284,"z":[986.586,582.006,433.997,1157.241,0.0]},{"id":24134850835,"name":"Singapore Running","type":"running","start":"2026-08-27 18:21:16","date":"2026-08-27","dist":7008.64013671875,"dur":3148.116943359375,"hr":153.0,"te":"AEROBIC_BASE","ate":2.700000047683716,"z":[277.969,2410.996,426.078,0.0,0.0]},{"id":24154226335,"name":"Singapore Running","type":"running","start":"2026-08-29 06:54:33","date":"2026-08-29","dist":14003.6904296875,"dur":6518.93212890625,"hr":158.0,"te":"AEROBIC_BASE","ate":3.200000047683716,"z":[352.101,2105.279,4015.833,0.0,0.0]},{"id":24196248809,"name":"Singapore Track Running","type":"track_running","start":"2026-09-01 19:23:37","date":"2026-09-01","dist":8510.0,"dur":3372.0029296875,"hr":163.0,"te":"VO2MAX","ate":4.0,"z":[809.221,229.003,758.88,1427.781,3.001]},{"id":24221596727,"name":"Singapore Running","type":"running","start":"2026-09-03 18:37:33","date":"2026-09-03","dist":6005.85009765625,"dur":2673.64990234375,"hr":155.0,"te":"AEROBIC_BASE","ate":2.700000047683716,"z":[175.002,1966.941,507.95,0.0,0.0]},{"id":24253030785,"name":"Singapore Running","type":"running","start":"2026-09-06 06:36:23","date":"2026-09-06","dist":15013.0703125,"dur":6891.7080078125,"hr":161.0,"te":"TEMPO","ate":3.5,"z":[353.467,1769.982,4735.814,1.0,0.0]},{"id":24283118613,"name":"Singapore Track Running","type":"track_running","start":"2026-09-08 19:05:02","date":"2026-09-08","dist":6830.0,"dur":3037.050048828125,"hr":149.0,"te":"VO2MAX","ate":3.5999999046325684,"z":[609.528,145.004,348.997,899.054,36.956]},{"id":24307976106,"name":"Singapore - Base","type":"running","start":"2026-09-10 18:21:50","date":"2026-09-10","dist":6002.7900390625,"dur":2680.158935546875,"hr":156.0,"te":"AEROBIC_BASE","ate":2.9000000953674316,"z":[196.992,1183.831,1240.583,0.0,0.0]},{"id":24327091668,"name":"Singapore Running","type":"running","start":"2026-09-12 07:30:27","date":"2026-09-12","dist":5004.830078125,"dur":1578.25,"hr":186.0,"te":"VO2MAX","ate":4.099999904632568,"z":[19.999,24.0,128.003,631.264,765.442]},{"id":24395091858,"name":"Singapore Track Running","type":"track_running","start":"2026-09-17 18:52:12","date":"2026-09-17","dist":8650.0,"dur":3570.946044921875,"hr":158.0,"te":"LACTATE_THRESHOLD","ate":3.9000000953674316,"z":[870.41,245.997,809.151,1310.351,0.0]},{"id":24426013718,"name":"Singapore Running","type":"running","start":"2026-09-20 06:57:08","date":"2026-09-20","dist":16004.1904296875,"dur":7363.462890625,"hr":159.0,"te":"AEROBIC_BASE","ate":3.4000000953674316,"z":[397.379,2081.509,4832.983,0.0,0.0]},{"id":24480443409,"name":"Singapore Track Running","type":"track_running","start":"2026-09-24 17:57:07","date":"2026-09-24","dist":11390.0,"dur":4731.5380859375,"hr":167.0,"te":"VO2MAX","ate":4.400000095367432,"z":[767.547,529.0,838.006,2450.268,19.0]},{"id":24511331358,"name":"Singapore Running","type":"running","start":"2026-09-27 07:01:26","date":"2026-09-27","dist":17010.55078125,"dur":7687.41015625,"hr":162.0,"te":"TEMPO","ate":3.5999999046325684,"z":[139.157,1634.398,5831.394,1.002,0.0]},{"id":24801109076,"name":"Singapore Running","type":"running","start":"2026-10-21 18:06:06","date":"2026-10-21","dist":5002.009765625,"dur":2343.241943359375,"hr":161.0,"te":"AEROBIC_BASE","ate":2.799999952316284,"z":[17.875,590.431,1703.498,1.0,0.0]},{"id":24868002128,"name":"Singapore Track Running","type":"track_running","start":"2026-10-27 19:06:04","date":"2026-10-27","dist":5300.0,"dur":2518.465087890625,"hr":151.0,"te":"LACTATE_THRESHOLD","ate":3.700000047683716,"z":[468.048,138.003,352.004,939.1,0.0]},{"id":24910857019,"name":"Singapore Running","type":"running","start":"2026-10-31 07:03:03","date":"2026-10-31","dist":13010.66015625,"dur":6192.369140625,"hr":167.0,"te":"TEMPO","ate":3.799999952316284,"z":[101.873,565.976,4310.151,1130.932,0.0]},{"id":24950805418,"name":"Singapore Track Running","type":"track_running","start":"2026-11-03 19:30:47","date":"2026-11-03","dist":8160.0,"dur":3385.368896484375,"hr":167.0,"te":"VO2MAX","ate":4.699999809265137,"z":[503.579,161.083,725.003,1795.88,19.0]},{"id":24951009972,"name":"Singapore Track Running","type":"track_running","start":"2026-11-03 20:37:33","date":"2026-11-03","dist":840.0,"dur":480.4179992675781,"hr":146.0,"te":"RECOVERY","ate":1.2999999523162842,"z":[52.077,419.001,0.0,0.0,0.0]},{"id":24992304290,"name":"Singapore Running","type":"running","start":"2026-11-07 07:29:34","date":"2026-11-07","dist":12565.48046875,"dur":5751.09521484375,"hr":160.0,"te":"LACTATE_THRESHOLD","ate":3.700000047683716,"z":[263.572,2749.793,1621.976,1003.418,40.0]},{"id":25003730022,"name":"Singapore Running","type":"running","start":"2026-11-08 09:14:44","date":"2026-11-08","dist":5513.330078125,"dur":4700.2109375,"hr":150.0,"te":"AEROBIC_BASE","ate":3.700000047683716,"z":[1036.887,1313.035,1053.742,444.782,0.0]}]};
+if (!D) {
+  document.body.innerHTML = '<div style="font:16px/1.6 system-ui,sans-serif;padding:40px;max-width:640px;margin:0 auto;color:#ddd;background:#111;min-height:100vh"><b>This is the build template and has no data in it.</b><br>Open <b>tinkerer.html</b> instead, or run <code>python build_tinkerer.py</code> to regenerate it.</div>';
+  throw new Error('No data embedded: open tinkerer.html, not tinkerer.template.html');
+}
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEAR_COLORS = ['#38bdf8','#f472b6','#facc15','#34d399','#a78bfa','#fb923c','#f87171','#2dd4bf'];
+
+const RUNS = D.runs.map(r => {
+  const km = r.dist/1000;
+  return {...r, km, pace: r.dur/60/km, ts: Date.parse(r.start.replace(' ','T')+'Z'), year: +r.date.slice(0,4)};
+});
+const YEARS = [...new Set(RUNS.map(r=>r.year))].sort();
+const yc = y => YEAR_COLORS[YEARS.indexOf(y) % YEAR_COLORS.length];
+const MAXKM = Math.max(...RUNS.map(r=>r.km));
+
+/* ---------- formatting ---------- */
+const fmtPace = p => { let m=Math.floor(p), s=Math.round((p-m)*60); if (s===60){m++;s=0} return `${m}:${String(s).padStart(2,'0')}`; };
+const fmtDur = s => { s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`; };
+const fmtDate = r => new Date(r.ts).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}) + ' · ' + r.start.slice(11,16);
+const prettyTE = s => { if (!s || s==='UNKNOWN') return null; s = s.replace(/_/g,' ').toLowerCase().replace('vo2max','VO2 max'); return s[0].toUpperCase()+s.slice(1); };
+
+/* ---------- axes ---------- */
+const AX = {
+  hr:   {label:'Avg HR (bpm)',            get:r=>r.hr,   tick:v=>String(Math.round(v)), tip:v=>Math.round(v)+' bpm'},
+  dist: {label:'Distance (km)',           get:r=>r.km,   tick:v=>String(+v.toFixed(1)), tip:v=>v.toFixed(2)+' km'},
+  date: {label:'Date',                    get:r=>r.ts,   kind:'date'},
+  pace: {label:'Pace (min/km) · faster ↑', get:r=>r.pace, tick:fmtPace, tip:v=>fmtPace(v)+' /km', invert:true},
+};
+const domCache = {};
+function domain(key){
+  if (domCache[key]) return domCache[key];
+  const v = RUNS.map(AX[key].get).filter(x=>x!=null);
+  let lo = Math.min(...v), hi = Math.max(...v);
+  if (lo===hi){ lo-=1; hi+=1; }
+  const pad = (hi-lo)*0.05;
+  return domCache[key] = [lo-pad, hi+pad];
+}
+function niceTicks(lo, hi, target){
+  const raw = (hi-lo)/target, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1,2,2.5,5,10].map(m=>m*p).find(s=>s>=raw) || p*10;
+  const out = []; for (let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(6));
+  return out;
+}
+function monthTicks(lo, hi){
+  const out = []; const d = new Date(lo); let y = d.getUTCFullYear(), m = d.getUTCMonth()+1;
+  for (;;){ const t = Date.UTC(y,m,1); if (t>hi) break; out.push(t); if (++m>11){m=0;y++} }
+  return out;
+}
+const dateLabel = (t,i) => { const d=new Date(t), m=MON[d.getUTCMonth()]; return (i===0||d.getUTCMonth()===0) ? `${m} ${d.getUTCFullYear()}` : m; };
+
+/* ---------- state ---------- */
+const state = {x:'hr', y:'pace', years:new Set(YEARS), minKm:0, sel:null};
+(function initSel(){
+  const big = RUNS.filter(r=>r.km>=16.09);   // "10+ mile" long runs (10 mi = 16.09 km)
+  state.sel = (big.length ? big.reduce((a,b)=>b.pace<a.pace?b:a)
+                          : RUNS.reduce((a,b)=>b.km>a.km?b:a)).id;
+})();
+const byId = id => RUNS.find(r=>r.id===id);
+const rOf = km => 3.5 + 11*Math.sqrt(km/MAXKM);
+
+/* ---------- controls ---------- */
+$('sub').textContent = `${RUNS.length} runs · ${YEARS.join(', ')}`;
+$('chips').innerHTML = YEARS.map(y=>`<button class="chip" type="button" data-y="${y}" aria-pressed="true" style="--c:${yc(y)}"><i></i>${y}</button>`).join('');
+$('chips').addEventListener('click', e=>{
+  const b = e.target.closest('.chip'); if (!b) return;
+  const y = +b.dataset.y; state.years.has(y) ? state.years.delete(y) : state.years.add(y);
+  b.setAttribute('aria-pressed', state.years.has(y)); draw();
+});
+$('minkm').max = Math.ceil(MAXKM);
+$('minkm').addEventListener('input', e=>{ state.minKm = +e.target.value; $('minlbl').textContent = state.minKm.toFixed(1)+' km'; draw(); });
+function syncSelects(){
+  [...$('xsel').options].forEach(o=>o.disabled = (o.value==='hr' && state.y==='hr'));
+  [...$('ysel').options].forEach(o=>o.disabled = (o.value==='hr' && state.x==='hr'));
+}
+$('xsel').addEventListener('change', e=>{ state.x = e.target.value; if (state.x==='hr' && state.y==='hr'){ state.y='pace'; $('ysel').value='pace'; } syncSelects(); draw(); });
+$('ysel').addEventListener('change', e=>{ state.y = e.target.value; if (state.y==='hr' && state.x==='hr'){ state.x='dist'; $('xsel').value='dist'; } syncSelects(); draw(); });
+syncSelects();
+
+/* ---------- plot ---------- */
+let visible = [];
+function draw(){
+  const box = $('plot'), W = Math.max(320, box.clientWidth), H = Math.round(Math.min(640, Math.max(380, W*0.56)));
+  const m = {l:70, r:22, t:16, b:60}, pw = W-m.l-m.r, ph = H-m.t-m.b;
+  const X = AX[state.x], Y = AX[state.y], xd = domain(state.x), yd = domain(state.y);
+  const px = v => m.l + (v-xd[0])/(xd[1]-xd[0])*pw;
+  const py = v => Y.invert ? m.t + (v-yd[0])/(yd[1]-yd[0])*ph : m.t + (yd[1]-v)/(yd[1]-yd[0])*ph;
+
+  visible = RUNS.filter(r=>state.years.has(r.year) && r.km>=state.minKm && X.get(r)!=null && Y.get(r)!=null);
+  const total = RUNS.filter(r=>state.years.has(r.year) && r.km>=state.minKm).length;
+  $('count').innerHTML = `Showing <b>${visible.length}</b> of ${RUNS.length} runs` + (total>visible.length?`<br>${total-visible.length} lack data for these axes`:'');
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="ui-sans-serif,system-ui,sans-serif">`;
+  // gridlines + ticks
+  const xt = X.kind==='date' ? monthTicks(xd[0],xd[1]) : niceTicks(xd[0],xd[1],Math.max(4,Math.round(pw/110)));
+  const yt = niceTicks(yd[0],yd[1],Math.max(4,Math.round(ph/62)));
+  xt.forEach((t,i)=>{ const x=px(t);
+    s += `<line x1="${x}" x2="${x}" y1="${m.t}" y2="${H-m.b}" stroke="#1a2740"/>`;
+    s += `<text x="${x}" y="${H-m.b+18}" text-anchor="middle" font-size="11" fill="#8da0b8">${X.kind==='date'?dateLabel(t,i):X.tick(t)}</text>`; });
+  yt.forEach(t=>{ const y=py(t);
+    s += `<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="#1a2740"/>`;
+    s += `<text x="${m.l-9}" y="${y+4}" text-anchor="end" font-size="11" fill="#8da0b8">${Y.tick(t)}</text>`; });
+  s += `<line x1="${m.l}" x2="${W-m.r}" y1="${H-m.b}" y2="${H-m.b}" stroke="#2a3a55"/><line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${H-m.b}" stroke="#2a3a55"/>`;
+  s += `<text x="${m.l+pw/2}" y="${H-10}" text-anchor="middle" font-size="12" fill="#a9b8cc">${X.label}</text>`;
+  s += `<text transform="translate(16 ${m.t+ph/2}) rotate(-90)" text-anchor="middle" font-size="12" fill="#a9b8cc">${Y.label}</text>`;
+
+  // dots: big first so small ones stay clickable on top
+  visible.slice().sort((a,b)=>b.km-a.km).forEach(r=>{
+    const c = yc(r.year);
+    s += `<circle data-id="${r.id}" tabindex="0" role="button" aria-label="${esc(r.name)}, ${r.date}, ${r.km.toFixed(1)} kilometres, pace ${fmtPace(r.pace)}"
+      cx="${px(X.get(r)).toFixed(1)}" cy="${py(Y.get(r)).toFixed(1)}" r="${rOf(r.km).toFixed(1)}" fill="${c}" fill-opacity=".72" stroke="${c}" stroke-opacity=".95"/>`;
+  });
+  // selected ring
+  const sel = byId(state.sel);
+  if (sel && visible.includes(sel))
+    s += `<circle cx="${px(X.get(sel)).toFixed(1)}" cy="${py(Y.get(sel)).toFixed(1)}" r="${(rOf(sel.km)+4).toFixed(1)}" fill="none" stroke="#fff" stroke-width="2.5" pointer-events="none" style="filter:drop-shadow(0 0 6px rgba(255,255,255,.7))"/>`;
+  // size legend
+  const lg = [5, 10, 15].filter(v=>v<=MAXKM+1); let lx = W-m.r-12;
+  s += `<g font-size="11" fill="#8da0b8" text-anchor="end">`;
+  lg.slice().reverse().forEach(v=>{ const r=rOf(v); lx -= r; s += `<circle cx="${lx}" cy="${H-m.b-r-8}" r="${r}" fill="none" stroke="#5b6c84"/><text x="${lx+r}" y="${H-m.b-2*r-12}" ${''}text-anchor="end" style="display:none">${v}</text>`; lx -= r+8; });
+  s += `<text x="${lx}" y="${H-m.b-14}" text-anchor="end">dot size = distance (5 · 10 · 15 km)</text></g>`;
+  box.innerHTML = s + '</svg>';
+  renderPanel();
+}
+
+/* ---------- tooltip + selection ---------- */
+const tip = $('tip'), plot = $('plot');
+const dotOf = e => e.target.closest && e.target.closest('circle[data-id]');
+plot.addEventListener('pointermove', e=>{
+  const c = dotOf(e);
+  if (!c){ tip.style.opacity = 0; return; }
+  const r = byId(+c.dataset.id), box = plot.getBoundingClientRect();
+  tip.innerHTML = `<b>${esc(r.name)}</b><span>${fmtDate(r)}</span><br>${r.km.toFixed(2)} km · ${fmtPace(r.pace)} /km · ${r.hr!=null?Math.round(r.hr)+' bpm':'no HR'}`;
+  let x = e.clientX-box.left, y = e.clientY-box.top;
+  tip.style.left = Math.min(x, box.width-230)+'px'; tip.style.top = y+'px'; tip.style.opacity = 1;
+});
+plot.addEventListener('pointerleave', ()=>tip.style.opacity = 0);
+plot.addEventListener('click', e=>{ const c = dotOf(e); if (c) select(+c.dataset.id); });
+plot.addEventListener('keydown', e=>{ if ((e.key==='Enter'||e.key===' ') && dotOf(e)){ e.preventDefault(); select(+dotOf(e).dataset.id); } });
+function select(id){
+  state.sel = id; draw();
+  const el = plot.querySelector(`circle[data-id="${id}"]`);
+  if (el && document.activeElement && document.activeElement.closest && document.activeElement.closest('#plot')) el.focus({preventScroll:true});
+}
+
+/* ---------- side panel ---------- */
+function renderPanel(){
+  const r = byId(state.sel), side = $('side');
+  if (!r){ side.innerHTML = '<div class="nozones">Click a dot to inspect a run.</div>'; return; }
+  const te = prettyTE(r.te), hidden = !visible.includes(r);
+  const ZN = ['Z1 Warm-up','Z2 Easy','Z3 Aerobic','Z4 Threshold','Z5 Max'];
+  let zones = '<div class="nozones">No heart-rate zone data for this run.</div>';
+  const tot = r.z ? r.z.reduce((a,v)=>a+(v||0),0) : 0;
+  if (tot > 0){
+    zones = `<div class="zbar">${r.z.map((v,i)=>{ const p=(v||0)/tot; return `<div style="width:${p*100}%;background:var(--z${i+1})" title="${ZN[i]}: ${fmtDur(v||0)}">${p>=0.08?Math.round(p*100)+'%':''}</div>`; }).join('')}</div>
+      <div class="zrows">${r.z.map((v,i)=>`<div class="zr"><i style="background:var(--z${i+1})"></i><span>${ZN[i]}</span><span class="t">${fmtDur(v||0)}</span><span class="p">${Math.round((v||0)/tot*100)}%</span></div>`).join('')}</div>`;
+  }
+  side.innerHTML = `
+    <h2>${esc(r.name)}</h2>
+    <div class="when">${fmtDate(r)}</div>
+    ${hidden ? '<div class="hidden" style="display:block">Not shown on the chart: hidden by the current filters or axes.</div>' : ''}
+    <div class="stats">
+      <div class="stat"><div class="k">Distance</div><div class="v">${r.km.toFixed(2)}<small>km</small></div></div>
+      <div class="stat"><div class="k">Pace</div><div class="v">${fmtPace(r.pace)}<small>/km</small></div></div>
+      <div class="stat"><div class="k">Avg HR</div><div class="v">${r.hr!=null?Math.round(r.hr):'—'}<small>bpm</small></div></div>
+      <div class="stat"><div class="k">Time</div><div class="v">${fmtDur(r.dur)}</div></div>
+    </div>
+    <div class="te"><div class="k">Training effect</div>${te?`<span class="v">${te}</span>`:'<span class="v">—</span>'}${r.ate!=null?`<span class="n">aerobic ${r.ate.toFixed(1)}</span>`:''}</div>
+    <div class="zh">Time in HR zones</div>
+    ${zones}
+    <div class="foot">Pace is distance over total timer time, so pauses count against it.</div>`;
+}
+
+let rz; addEventListener('resize', ()=>{ clearTimeout(rz); rz = setTimeout(draw, 120); });
+draw();
+</script>
+
+<style>
+#__rf{position:fixed;right:14px;bottom:14px;z-index:2147483000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.12em}
+#__rf button{cursor:pointer;color:#22e5ff;background:rgba(8,12,20,.9);border:1px solid #22e5ff;padding:8px 13px;border-radius:999px;font:inherit}
+#__rf button:hover:not(:disabled){box-shadow:0 0 12px rgba(34,229,255,.55)}
+#__rf button:disabled{opacity:.65;cursor:progress}
+#__rf button.err{color:#ff4d6d;border-color:#ff4d6d}
+#__rf span{display:none;max-width:260px;color:#ffb020;background:rgba(8,12,20,.92);padding:5px 9px;border-radius:6px;letter-spacing:.04em;font-weight:500}
+</style>
+<div id="__rf"><span id="__rfs"></span><button id="__rfb" type="button">↻ REFRESH</button></div>
+<script>
+(function(){
+  var btn=document.getElementById('__rfb'), st=document.getElementById('__rfs');
+  var local=location.protocol==='file:', dev=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  if(!local&&!dev){ btn.textContent='↻ RELOAD'; btn.title='Reload the latest published data'; }
+  if(local){ btn.title='Run "python serve.py" to enable refresh'; }
+  function say(t,title){ st.textContent=t; st.title=title||''; st.style.display=t?'block':'none'; }
+  btn.addEventListener('click', async function(){
+    if(local){ say('START: python serve.py'); return; }
+    if(!dev){ location.reload(); return; }
+    btn.disabled=true; btn.classList.remove('err'); btn.textContent='PULLING…'; say('0s');
+    var t0=Date.now(), tick=setInterval(function(){ say(Math.round((Date.now()-t0)/1000)+'s'); },1000);
+    try{
+      var r=await fetch('/refresh',{method:'POST',headers:{'X-Commander':'1'}});
+      var j=await r.json().catch(function(){return {ok:false,log:'HTTP '+r.status}});
+      if(!j.ok) throw new Error(j.log||('HTTP '+r.status));
+      clearInterval(tick); btn.textContent='✓ DONE'; location.reload();
+    }catch(e){
+      clearInterval(tick); btn.disabled=false; btn.classList.add('err'); btn.textContent='↻ RETRY';
+      var m=String(e.message||e).trim().split('\n').filter(Boolean).slice(-1)[0]||'failed';
+      say(m.slice(0,140), String(e.message||e));
+    }
+  });
+})();
+</script>
+</body>
+</html>

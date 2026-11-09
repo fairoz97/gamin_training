@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coach · Athlete overview</title>
+<style>
+:root{
+  --ink:#111827; --mut:#6b7280; --faint:#9ca3af; --line:#e5e7eb; --soft:#f8fafc;
+  --side:#0e1620; --side2:#172230; --sidetext:#c3cfdc;
+  --red:#e5484d; --amber:#f5a524; --green:#30a46c; --blue:#2563eb; --indigo:#6366f1;
+  --z1:#cbd5e1; --z2:#60a5fa; --z3:#34d399; --z4:#f59e0b; --z5:#ef4444;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;font:14px/1.45 var(--sans);color:var(--ink);background:#fff}
+button{font:inherit;cursor:pointer}
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+
+/* sidebar */
+.side{background:var(--side);color:var(--sidetext);padding:20px 14px;display:flex;flex-direction:column;gap:20px;
+  position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;letter-spacing:.02em;padding:0 6px}
+.brand i{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#38bdf8,#6366f1);display:block}
+.sl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#6f8196;padding:0 8px}
+.ath{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;background:var(--side2);
+  box-shadow:inset 3px 0 0 #38bdf8;color:#fff}
+.ath .av{width:32px;height:32px;font-size:12px}
+.ath .nm{font-weight:600;line-height:1.2}
+.ath .st{font-size:11px;color:#8da0b4}
+.ath .sd{margin-left:auto;width:10px;height:10px;border-radius:50%}
+.invite{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border-radius:9px;
+  border:1px dashed #33465a;background:transparent;color:#9fb2c6;width:100%}
+.invite:hover{border-color:#5b7690;color:#fff}
+.sidefoot{margin-top:auto;font-size:11px;color:#6f8196;padding:0 8px}
+
+/* main */
+.main{padding:28px 36px 44px;max-width:1240px;width:100%}
+.av{border-radius:50%;background:linear-gradient(135deg,#38bdf8,#6366f1);color:#fff;font-weight:700;
+  display:grid;place-items:center;flex:none}
+.head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.head .av{width:54px;height:54px;font-size:19px}
+.head h1{margin:0;font-size:24px;line-height:1.15}
+.meta{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--mut);font-size:13px;margin-top:4px}
+.meta b{color:var(--ink);font-weight:600}
+.meta a{color:var(--blue);text-decoration:none;cursor:pointer}
+.meta a:hover{text-decoration:underline}
+.pill{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;
+  font-weight:600;font-size:13px;border:1px solid;white-space:nowrap}
+.pill i{width:9px;height:9px;border-radius:50%;background:currentColor}
+.pill.r{color:#b4232a;background:#fdecee;border-color:#f7c5c8}
+.pill.a{color:#9a6200;background:#fff4de;border-color:#f6dba4}
+.pill.g{color:#16794a;background:#e7f7ef;border-color:#b6e6cc}
+
+.card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:#fff;min-width:0}
+.card h2{margin:0 0 12px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.card h2 span{letter-spacing:0;text-transform:none;color:var(--faint);font-weight:400;margin-left:8px}
+.row2{display:grid;gap:16px;margin-bottom:16px}
+.rA{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.rB{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.rV{grid-template-columns:1fr 1fr}
+
+/* flags */
+.flag{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.flag:last-child{border-bottom:0;padding-bottom:2px}
+.flag:first-of-type{padding-top:2px}
+.dot{width:12px;height:12px;border-radius:50%;flex:none;margin-top:4px;box-shadow:0 0 0 4px var(--halo)}
+.dot.r{background:var(--red);--halo:#fdecee}.dot.a{background:var(--amber);--halo:#fff4de}
+.dot.g{background:var(--green);--halo:#e7f7ef}.dot.n{background:#cbd5e1;--halo:#f1f5f9}
+.flag b{font-weight:600;margin-right:8px}
+.flag span{color:#374151}
+
+/* note */
+textarea{width:100%;min-height:228px;overflow:hidden;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+  font:inherit;line-height:1.55;color:var(--ink);background:var(--soft)}
+textarea:focus{outline:2px solid #bfdbfe;border-color:#93c5fd;background:#fff}
+.noterow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.watch{font-size:12px;color:var(--mut);margin-right:auto}
+.watch b{color:var(--ink);font-weight:600}
+.send{border:0;border-radius:9px;background:var(--blue);color:#fff;font-weight:600;padding:10px 16px}
+.send:hover{background:#1d4ed8}
+
+/* weekly volume */
+.bars{display:flex;align-items:flex-end;gap:6px;height:172px;padding-bottom:20px;position:relative}
+.wk{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}
+.wk .val{font-size:11px;color:#374151;margin-bottom:4px;white-space:nowrap}
+.wk .val.z{color:var(--faint)}
+.wk .bar{width:100%;max-width:38px;border-radius:5px 5px 0 0;background:var(--c);min-height:2px}
+.wk.cur .bar{background:repeating-linear-gradient(135deg,var(--c) 0 5px,color-mix(in srgb,var(--c) 40%,#fff) 5px 10px)}
+.wk .wl{position:absolute;bottom:-19px;font-size:11px;color:var(--mut);white-space:nowrap}
+.vsub{font-size:12px;color:var(--mut);margin-top:6px}
+.vsub b{color:var(--ink)}
+
+/* sessions */
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600;text-align:left;padding:0 8px 8px 0}
+td{padding:9px 8px 9px 0;border-top:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+td.n{white-space:normal}
+.num{text-align:right;padding-right:14px}
+th.num{padding-right:14px}
+.chip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:5px;margin-right:8px;
+  color:var(--k);background:color-mix(in srgb,var(--k) 12%,#fff)}
+.mut{color:var(--mut)}
+.te b{font-weight:600}
+
+/* intensity */
+.easy{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.easy .p{font-size:34px;font-weight:700;line-height:1}
+.easy .t{color:var(--mut);font-size:13px}
+.zbar{display:flex;height:26px;border-radius:7px;overflow:hidden;background:var(--soft)}
+.zbar div{display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff;min-width:0;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 14px;font-size:12px;color:var(--mut)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.days{display:flex;align-items:flex-end;gap:3px;height:96px;padding-bottom:18px;position:relative;border-bottom:1px solid var(--line)}
+.dcol{flex:1;min-width:0;height:100%;display:flex;flex-direction:column-reverse;align-items:stretch;position:relative}
+.dcol div{width:100%}
+.dcol .dl{position:absolute;bottom:-19px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--mut);white-space:nowrap}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#111827;color:#fff;padding:11px 16px;
+  border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;max-width:min(520px,90vw);z-index:9}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:1100px){.rA,.rB{grid-template-columns:1fr}}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px 16px}
+  .sl,.sidefoot{display:none}.ath{flex:1;min-width:200px}.invite{width:auto}.main{padding:20px 16px 40px}
+  .rV{grid-template-columns:1fr}.pill{margin-left:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><i></i>Coach</div>
+    <div>
+      <div class="sl" style="margin-bottom:8px">Athletes</div>
+      <div class="ath"><div class="av" id="sav"></div><div><div class="nm" id="snm"></div><div class="st" id="sst"></div></div><span class="sd" id="ssd"></span></div>
+    </div>
+    <button class="invite" id="invite" type="button">＋ Invite athlete</button>
+    <div class="sidefoot">Data from Garmin Connect</div>
+  </aside>
+
+  <main class="main">
+    <header class="head">
+      <div class="av" id="hav"></div>
+      <div>
+        <h1 id="hnm"></h1>
+        <div class="meta"><span>Goal race <b id="race">—</b></span><span>Days out <b id="out">—</b></span><span>Last Garmin sync <b id="sync">—</b></span></div>
+      </div>
+      <div class="pill" id="pill"></div>
+    </header>
+
+    <section class="row2 rA">
+      <div class="card"><h2>Flags this morning</h2><div id="flags"></div></div>
+      <div class="card">
+        <h2>Note to athlete <span>draft · editable</span></h2>
+        <textarea id="note" spellcheck="true"></textarea>
+        <div class="noterow"><div class="watch" id="watch"></div><button class="send" id="send" type="button">Send + update watch workout</button></div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-bottom:16px">
+      <h2>Weekly volume <span>last 10 weeks</span></h2>
+      <div class="row2 rV" style="margin:0">
+        <div><div class="vsub" style="margin:0 0 6px"><b>Run miles</b> · <span id="rm-sub"></span></div><div class="bars" id="miles"></div></div>
+        <div><div class="vsub" style="margin:0 0 6px"><b>Training hours</b> · <span id="hr-sub"></span></div><div class="bars" id="hours"></div></div>
+      </div>
+    </section>
+
+    <section class="row2 rB">
+      <div class="card"><h2>Last 8 sessions</h2><div style="overflow-x:auto"><table id="sessions"></table></div></div>
+      <div class="card">
+        <h2>Intensity <span>last 28 days · time in HR zones</span></h2>
+        <div class="easy"><span class="p" id="easyp">—</span><span class="t" id="easyt"></span></div>
+        <div class="zbar" id="zbar"></div>
+        <div class="legend" id="legend"></div>
+        <div class="days" id="days"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const D = /*__DATA__*/null;
+
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAY = 86400000;
+const toMs = k => Date.parse(k + 'T00:00:00Z');
+const keyOf = ms => new Date(ms).toISOString().slice(0,10);
+const addDays = (k,n) => keyOf(toMs(k) + n*DAY);
+const fmtD = k => `${+k.slice(8,10)} ${MON[+k.slice(5,7)-1]}`;
+const $ = id => document.getElementById(id);
+const sum = a => a.reduce((s,v)=>s+v,0);
+const avg = a => { const n=a.filter(v=>v!=null); return n.length ? sum(n)/n.length : null; };
+const fx = (v,d=0) => v==null ? '—' : v.toFixed(d).replace('-','−');
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TODAY = D.today;
+const COL = {r:'#e5484d', a:'#f5a524', g:'#30a46c', n:'#cbd5e1'};
+
+const daily = {}; D.daily.forEach(r => daily[r.d] = r);
+const t0 = daily[TODAY] || {};
+
+/* ---------- derived: recovery inputs ---------- */
+const rhrNow = t0.rhr != null ? t0.rhr : D.hr.rhr;
+const rhrAvg7 = D.hr.avg7 != null ? D.hr.avg7 : avg(D.daily.slice(-7).map(r=>r.rhr));
+const hrvAll = D.hrv.slice().sort((a,b)=>a.d<b.d?-1:1);
+const hrvH = hrvAll.filter(h=>h.last!=null).pop() || hrvAll[hrvAll.length-1] || null;
+const sleeps = D.sleep.slice().sort((a,b)=>a.d<b.d?-1:1);
+const sleepL = sleeps[sleeps.length-1] || null;
+const sleepGap = sleepL ? Math.round((toMs(TODAY)-toMs(sleepL.d))/DAY) : null;   // nights since, wake-date based
+const needH = (D.sleepNeedMin||480)/60;
+
+/* ---------- derived: training form (fitness 42d avg load, fatigue 7d avg load) ---------- */
+const loadBy = {}; D.activities.forEach(a => loadBy[a.date] = (loadBy[a.date]||0) + (a.load||0));
+const days48 = Array.from({length:42}, (_,i)=>addDays(TODAY, i-41)).map(k=>loadBy[k]||0);
+const fit = sum(days48)/42, fat = sum(days48.slice(-7))/7, form = fit - fat, acwr = fit>0 ? fat/fit : null;
+
+/* ---------- flags ---------- */
+function buildFlags(){
+  const out = [];
+  // HRV vs baseline
+  if (hrvH){
+    const v = hrvH.last!=null ? hrvH.last : hrvH.weekly, st = (hrvH.status||'').toUpperCase();
+    let lvl = 'n';
+    if (st==='BALANCED') lvl='g'; else if (st==='UNBALANCED') lvl='a'; else if (st==='LOW'||st==='POOR') lvl='r';
+    else if (hrvH.balLow!=null) lvl = v>=hrvH.balLow && v<=hrvH.balHigh ? 'g' : 'a';
+    const rel = hrvH.balLow==null ? '' : v<hrvH.balLow ? 'below' : v>hrvH.balHigh ? 'above' : 'inside';
+    out.push({key:'hrv', lvl, label:'HRV vs baseline',
+      text:`${v} ms ${hrvH.last!=null?'overnight':'(7-day avg; no overnight reading)'} · ${rel} the ${hrvH.balLow}–${hrvH.balHigh} ms baseline${st?` · Garmin: ${st[0]+st.slice(1).toLowerCase()}`:''}`,
+      v, lo:hrvH.balLow, hi:hrvH.balHigh, over:hrvH.last!=null});
+  } else out.push({key:'hrv', lvl:'n', label:'HRV vs baseline', text:'No HRV data'});
+  // Sleep
+  if (sleepL){
+    const h = sleepL.secs/3600, hh = Math.floor(h), mm = Math.round((sleepL.secs/60)%60), sc = sleepL.score;
+    let lvl = 'g';
+    if (h<6 || (sc!=null && sc<60)) lvl='r'; else if (h<7 || (sc!=null && sc<70) || sleepGap>=2) lvl='a';
+    out.push({key:'sleep', lvl, label:'Sleep',
+      text:`${hh}h ${String(mm).padStart(2,'0')}m, score ${sc!=null?sc:'—'} on ${fmtD(sleepL.d)}${sleepGap>0?` · nothing recorded for the last ${sleepGap} night${sleepGap>1?'s':''}`:''}`,
+      hh, mm, sc, d:sleepL.d});
+  } else out.push({key:'sleep', lvl:'n', label:'Sleep', text:'No sleep data'});
+  // Resting HR vs 7-day average
+  if (rhrNow!=null && rhrAvg7!=null){
+    const diff = rhrNow - rhrAvg7;
+    const lvl = diff<=1 ? 'g' : diff<=3 ? 'a' : 'r';
+    out.push({key:'rhr', lvl, label:'Resting HR',
+      text:`${rhrNow} bpm vs ${Math.round(rhrAvg7)} bpm 7-day average (${diff>=0?'+':'−'}${Math.abs(Math.round(diff))})`, diff});
+  } else out.push({key:'rhr', lvl:'n', label:'Resting HR', text:'No resting HR data'});
+  // Training form
+  {
+    const lvl = acwr==null ? 'n' : acwr>1.5 ? 'r' : acwr>1.3 ? 'a' : 'g';
+    out.push({key:'form', lvl, label:'Training form',
+      text:`Form ${fx(form,0)} · last 7 days at ${fx(acwr,1)}× your 6-week load (${fx(fat,0)} vs ${fx(fit,0)} per day)`});
+  }
+  return out;
+}
+const FL = buildFlags();
+const flagged = FL.filter(f=>f.lvl==='r'||f.lvl==='a');
+const worst = FL.some(f=>f.lvl==='r') ? 'r' : flagged.length ? 'a' : 'g';
+
+/* ---------- header + sidebar ---------- */
+(function(){
+  const A = D.athlete, ini = A.name.split(/\s+/).filter(Boolean).map((w,i,a)=>(i===0||i===a.length-1)?w[0]:'').join('').toUpperCase();
+  $('hav').textContent = ini; $('sav').textContent = ini;
+  $('hnm').textContent = A.name; $('snm').textContent = A.name;
+  $('sst').textContent = flagged.length ? `${flagged.length} flag${flagged.length>1?'s':''} today` : 'All clear';
+  $('ssd').style.background = COL[worst];
+  document.title = `Coach · ${A.name}`;
+
+  const pill = $('pill'); pill.className = 'pill ' + worst;
+  pill.innerHTML = '<i></i>' + (flagged.length ? `${flagged.length} flag${flagged.length>1?'s':''} today` + (FL.filter(f=>f.lvl==='r').length ? ` · ${FL.filter(f=>f.lvl==='r').length} red` : '') : 'All clear today');
+
+  const dt = new Date(D.fetched);
+  const f = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(dt).replace(',','');
+  const mins = Math.round((Date.now()-dt.getTime())/60000);
+  const ago = mins<0 ? '' : mins<60 ? ` · ${mins}m ago` : mins<2880 ? ` · ${Math.round(mins/60)}h ago` : ` · ${Math.round(mins/1440)}d ago`;
+  $('sync').textContent = `${f} SGT${ago}`;
+
+  // goal race: build flag, else a value saved in this browser
+  let race = D.race && D.race.date ? D.race : null;
+  try { if (!race) race = JSON.parse(localStorage.getItem('coach.race')||'null'); } catch(e){}
+  const rEl = $('race'), oEl = $('out');
+  if (race && race.date){
+    const days = Math.ceil((Date.parse(race.date+'T00:00:00+08:00') - Date.now())/DAY);
+    rEl.innerHTML = `${esc(race.name||'Race')} · ${fmtD(race.date)} <a id="setrace" title="Change race">edit</a>`;
+    oEl.textContent = days>=0 ? `${days}` : `${-days} ago`;
+  } else {
+    rEl.innerHTML = `not set · <a id="setrace">set race</a>`; oEl.textContent = '—';
+  }
+  const sr = $('setrace');
+  if (sr) sr.onclick = () => {
+    const name = prompt('Race name', race && race.name || ''); if (name===null) return;
+    const date = prompt('Race date (YYYY-MM-DD)', race && race.date || ''); if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    try { localStorage.setItem('coach.race', JSON.stringify({name, date})); } catch(e){}
+    location.reload();
+  };
+})();
+
+/* ---------- flags list ---------- */
+$('flags').innerHTML = FL.map(f => `<div class="flag"><span class="dot ${f.lvl}"></span><div><b>${f.label}</b><span>${esc(f.text)}</span></div></div>`).join('');
+
+/* ---------- drafted note ---------- */
+(function(){
+  const first = D.athlete.first, byKey = Object.fromEntries(FL.map(f=>[f.key,f]));
+  const L = ['Hi ' + first + ','];
+  const bad = FL.filter(f=>f.lvl==='r'||f.lvl==='a');
+  if (!bad.length){
+    L.push('', 'Everything is in range this morning, so you are clear to run today\'s planned session. Keep an eye on how it feels and tell me if anything is off.');
+  } else {
+    L.push('', 'Quick check-in before today\'s session. Here is what I am seeing:');
+    const s = [];
+    if (['r','a'].includes(byKey.form.lvl)) s.push(`Load is up sharply: the last 7 days are ${fx(acwr,1)}× your 6-week base (form ${fx(form,0)}).`);
+    if (['r','a'].includes(byKey.hrv.lvl)) s.push(`HRV is ${byKey.hrv.v} ms against a ${byKey.hrv.lo}–${byKey.hrv.hi} ms baseline, so you are not fully recovered.`);
+    if (['r','a'].includes(byKey.sleep.lvl)){
+      const sl = byKey.sleep;
+      s.push(`Your last logged night (${fmtD(sl.d)}) was ${sl.hh}h ${String(sl.mm).padStart(2,'0')}m${sleepGap>1?`, and nothing has been recorded for ${sleepGap} nights since. Please wear the watch to bed so I can see your recovery`:` against roughly ${needH.toFixed(0)}h needed`}.`);
+    }
+    if (['r','a'].includes(byKey.rhr.lvl)) s.push(`Resting HR is ${rhrNow}, ${Math.round(byKey.rhr.diff)} bpm above your 7-day average of ${Math.round(rhrAvg7)}.`);
+    s.forEach(x => L.push('• ' + x));
+    L.push('', FL.some(f=>f.lvl==='r')
+      ? 'Plan for today: swap anything hard for 30–40 minutes easy (Zone 1–2), or take a rest day.'
+      : 'Plan for today: keep the session but cap it at Zone 2 and stop early if it feels heavy.');
+  }
+  L.push('', 'Reply with how your legs feel (1–10) and how you slept, and I will adjust the rest of the week.', '', '— Coach');
+  $('note').value = L.join('\n');
+  const ta = $('note'); ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 4) + 'px';
+
+  const red = FL.some(f=>f.lvl==='r'), amb = FL.some(f=>f.lvl==='a');
+  $('watch').innerHTML = 'Watch workout → <b>' + (red ? 'Easy aerobic · Zone 1–2 · 40 min' : amb ? 'Steady aerobic · cap Zone 2' : 'No change to planned workout') + '</b>';
+})();
+
+/* ---------- toasts + buttons ---------- */
+let tt; function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),4200); }
+$('invite').onclick = () => toast('Invites aren\'t set up yet. This view has one athlete for now.');
+$('send').onclick = async () => {
+  const ta = $('note'); let ok = false;
+  try { await navigator.clipboard.writeText(ta.value); ok = true; } catch(e){}
+  if (!ok){ ta.select(); try { ok = document.execCommand('copy'); } catch(e){} }
+  toast((ok ? 'Note copied to your clipboard. ' : '') + 'Sending and watch-workout sync aren\'t connected yet.');
+};
+
+/* ---------- weekly volume ---------- */
+(function(){
+  const dow = new Date(toMs(TODAY)).getUTCDay(), monday = addDays(TODAY, -((dow+6)%7));
+  const weeks = Array.from({length:10}, (_,i)=>{
+    const start = addDays(monday, -7*(9-i)), end = addDays(start,6);
+    const acts = D.activities.filter(a=>a.date>=start && a.date<=end);
+    return {start,
+      mi: sum(acts.filter(a=>/run/.test(a.type||'')).map(a=>a.dist/1609.344)),
+      hr: sum(acts.map(a=>a.dur))/3600};
+  });
+  const draw = (id, key, color, fmt) => {
+    const vals = weeks.map(w=>w[key]), mx = Math.max(...vals, 0.0001);
+    $(id).innerHTML = weeks.map((w,i)=>`<div class="wk${i===9?' cur':''}" title="Week of ${fmtD(w.start)}: ${fmt(w[key])}">
+      <div class="val${w[key]?'':' z'}">${w[key]?fmt(w[key]):'0'}</div>
+      <div class="bar" style="height:${(w[key]/mx*104).toFixed(1)}px;--c:${color}"></div>
+      ${(9-i)%3===0 ? `<div class="wl">${fmtD(w.start)}</div>` : ''}</div>`).join('');
+    const done = vals.slice(0,9);
+    return {avg: avg(done), cur: vals[9]};
+  };
+  const m = draw('miles','mi','#2563eb', v=>v.toFixed(1));
+  const h = draw('hours','hr','#6366f1', v=>v.toFixed(1));
+  $('rm-sub').innerHTML = `9-wk avg <b>${m.avg.toFixed(1)}</b> · this week <b>${m.cur.toFixed(1)}</b>`;
+  $('hr-sub').innerHTML = `9-wk avg <b>${h.avg.toFixed(1)}</b> · this week <b>${h.cur.toFixed(1)}</b> h`;
+})();
+
+/* ---------- last 8 sessions ---------- */
+(function(){
+  const T = {running:['RUN','#2563eb'],track_running:['TRACK','#2563eb'],treadmill_running:['TREAD','#2563eb'],trail_running:['TRAIL','#2563eb'],
+    strength_training:['STRENGTH','#7c3aed'],hiit:['HIIT','#e5484d'],walking:['WALK','#0891b2'],hiking:['HIKE','#0891b2'],
+    indoor_cycling:['BIKE','#d97706'],cycling:['BIKE','#d97706']};
+  const dur = s => { s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+    return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`; };
+  const pretty = s => { if(!s || s==='UNKNOWN') return null; s = s.replace(/_/g,' ').toLowerCase().replace('vo2max','VO2 max'); return s[0].toUpperCase()+s.slice(1); };
+  const rows = D.activities.slice().sort((a,b)=>a.start<b.start?1:-1).slice(0,8).map(a=>{
+    const [lab,col] = T[a.type] || [(a.type||'ACT').toUpperCase().slice(0,6),'#475569'];
+    const te = pretty(a.te);
+    return `<tr><td class="mut">${fmtD(a.date)}</td>
+      <td class="n"><span class="chip" style="--k:${col}">${lab}</span>${esc(a.name)}</td>
+      <td class="num">${a.dist>0 ? (a.dist/1609.344).toFixed(2)+' mi' : dur(a.dur)}</td>
+      <td class="num">${a.hr ? Math.round(a.hr)+' bpm' : '—'}</td>
+      <td class="te">${te ? `<b>${te}</b>${a.ate!=null?` <span class="mut">${a.ate.toFixed(1)}</span>`:''}` : '<span class="mut">—</span>'}</td></tr>`;
+  }).join('');
+  $('sessions').innerHTML = `<thead><tr><th>Date</th><th>Session</th><th class="num">Distance / time</th><th class="num">Avg HR</th><th>Training effect</th></tr></thead><tbody>${rows}</tbody>`;
+})();
+
+/* ---------- intensity: 28 days of time in HR zones ---------- */
+(function(){
+  const ZC = ['var(--z1)','var(--z2)','var(--z3)','var(--z4)','var(--z5)'];
+  const ZN = ['Z1 Warm-up','Z2 Easy','Z3 Aerobic','Z4 Threshold','Z5 Max'];
+  const start = addDays(TODAY,-27);
+  const byDay = {}; D.activities.forEach(a=>{ if (a.z && a.date>=start){ const z = byDay[a.date] || (byDay[a.date]=[0,0,0,0,0]); a.z.forEach((v,i)=>z[i]+=v||0); }});
+  const tot = [0,0,0,0,0]; Object.values(byDay).forEach(z=>z.forEach((v,i)=>tot[i]+=v));
+  const all = sum(tot);
+  if (!all){ $('easyp').textContent='—'; $('easyt').textContent='No HR zone data in the last 28 days'; return; }
+  const easy = (tot[0]+tot[1])/all;
+  $('easyp').textContent = Math.round(easy*100) + '%';
+  $('easyp').style.color = easy>=0.7 ? 'var(--green)' : easy>=0.5 ? '#b7791f' : 'var(--red)';
+  $('easyt').textContent = `easy (Z1–2) · ${(all/3600).toFixed(1)} h across ${Object.keys(byDay).length} sessions days`.replace('sessions days','days with HR data');
+  $('zbar').innerHTML = tot.map((v,i)=>`<div style="width:${v/all*100}%;background:${ZC[i]};${i===0?'color:#475569':''}" title="${ZN[i]}: ${(v/3600).toFixed(1)} h">${v/all>=0.07?Math.round(v/all*100)+'%':''}</div>`).join('');
+  $('legend').innerHTML = ZN.map((n,i)=>`<span><i style="background:${ZC[i]}"></i>${n}</span>`).join('');
+  const mx = Math.max(...Object.values(byDay).map(sum), 1);
+  $('days').innerHTML = Array.from({length:28},(_,i)=>{
+    const k = addDays(start,i), z = byDay[k] || [0,0,0,0,0];
+    return `<div class="dcol" title="${fmtD(k)}: ${(sum(z)/60).toFixed(0)} min in zones">${z.map((v,j)=>`<div style="height:${(v/mx*74).toFixed(1)}px;background:${ZC[j]}"></div>`).join('')}${(27-i)%7===0?`<span class="dl">${fmtD(k)}</span>`:''}</div>`;
+  }).join('');
+})();
+</script>
+</body>
+</html>

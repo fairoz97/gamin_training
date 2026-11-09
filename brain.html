@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ATHLETE · OS</title>
+<style>
+:root{
+  --gold:#ffcc4d; --green:#3dff9a; --blue:#4aa3ff; --cyan:#22e5ff; --gray:#8a93a6; --red:#ff4d6d;
+  --txt:#eadffb; --dim:#8f81b0; --faint:#52467a; --line:rgba(255,204,77,.22);
+  --glass:rgba(16,8,34,.74);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+html{color-scheme:dark}
+body{margin:0;color:var(--txt);font:12px/1.5 var(--mono);overflow-x:hidden;
+  background:radial-gradient(ellipse 90% 70% at 50% 30%,#2b1052 0%,#150733 38%,#07030f 78%,#030108 100%) fixed;}
+button,input{font:inherit;color:inherit}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.os{position:relative;z-index:1;height:100vh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+
+/* top bar */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 26px;padding:11px 20px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(24,10,48,.85),rgba(14,6,30,.55));}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3em;color:#fff;white-space:nowrap}
+.gdot{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 22px 4px rgba(255,204,77,.75);transform:scale(1.15)}}
+.status{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--dim);letter-spacing:.14em;font-size:11px;margin:0 auto}
+.status span::before{content:"● ";color:var(--green)}
+.status span.off::before{color:var(--red)}
+.status b{color:var(--txt);font-weight:600}
+.clock{font-size:13px;letter-spacing:.14em;color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
+.clock small{color:var(--dim);margin-left:6px;font-size:10px}
+
+/* layout */
+.main{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;gap:14px;padding:14px 16px 16px;min-height:0}
+.rail{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:#3a2a63 transparent}
+.panel{border:1px solid var(--line);background:var(--glass);padding:13px 14px;position:relative}
+.panel::before{content:"";position:absolute;left:-1px;top:-1px;width:12px;height:12px;border-left:2px solid var(--gold);border-top:2px solid var(--gold)}
+.pt{font-size:10px;letter-spacing:.24em;color:var(--gold);margin:0 0 10px;font-weight:600}
+.center{position:relative;min-width:0;min-height:0}
+#g{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+#g.drag{cursor:grabbing}
+
+/* north star */
+.ns .big{font-size:64px;line-height:1;font-weight:700;color:var(--gold);text-shadow:0 0 28px rgba(255,204,77,.6);font-variant-numeric:tabular-nums}
+.ns .sub{margin-top:6px;color:var(--dim);letter-spacing:.12em;font-size:11px}
+.lnk{background:none;border:0;padding:0;color:var(--green);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.lnk:hover{color:#fff}
+
+/* vitals */
+.vit{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(255,204,77,.1)}
+.vit:last-child{border-bottom:0;padding-bottom:0}
+.vit .d{width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 9px var(--c);align-self:center}
+.vit .k{color:var(--dim);letter-spacing:.14em;font-size:10px}
+.vit .v{color:var(--c);font-weight:700;font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+.vit .x{grid-column:2/4;color:var(--faint);font-size:10.5px;color:#7f72a4}
+.dir{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,204,77,.1);line-height:1.5}
+.dir:last-child{border-bottom:0;padding-bottom:0}
+.dir i{font-style:normal;color:#12062a;background:var(--gold);width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;margin-top:1px}
+.dir b{color:var(--gold);font-weight:600}
+
+/* right rail */
+.deck{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sk{border:1px solid var(--line);background:rgba(40,18,78,.45);padding:10px 8px;text-align:left;cursor:pointer;letter-spacing:.06em;font-size:11px;line-height:1.3}
+.sk b{display:block;color:var(--gold);font-size:14px;margin-bottom:3px}
+.sk:hover{border-color:var(--gold);background:rgba(255,204,77,.1);box-shadow:0 0 14px rgba(255,204,77,.2)}
+.newchat{width:100%;margin-top:8px;padding:9px;border:1px dashed rgba(61,255,154,.5);background:rgba(61,255,154,.06);color:var(--green);cursor:pointer;letter-spacing:.14em;font-weight:600}
+.newchat:hover{background:rgba(61,255,154,.14);box-shadow:0 0 14px rgba(61,255,154,.25)}
+.search{width:100%;padding:9px 10px;background:rgba(8,3,18,.7);border:1px solid var(--line);outline:none;color:var(--txt)}
+.search:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,204,77,.18)}
+.search::placeholder{color:var(--faint)}
+.qc{margin-top:6px;color:var(--dim);font-size:10.5px;letter-spacing:.1em;min-height:16px}
+.leg{display:flex;flex-direction:column;gap:4px}
+.lg{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;padding:5px 4px;background:none;border:0;cursor:pointer;text-align:left;letter-spacing:.14em;font-size:11px}
+.lg i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 9px var(--c)}
+.lg b{font-weight:600;color:var(--txt)}
+.lg[aria-pressed="false"]{opacity:.35}
+.lg:hover{background:rgba(255,255,255,.04)}
+.note{margin-top:10px;color:var(--faint);font-size:10.5px;line-height:1.5}
+
+/* center overlays */
+.callout{position:absolute;right:6px;top:4px;width:232px;padding:11px 13px;border:1px solid rgba(255,204,77,.55);
+  background:rgba(22,10,44,.78);box-shadow:0 0 22px rgba(255,204,77,.18)}
+.callout .t{font-size:10px;letter-spacing:.22em;color:var(--gold);margin-bottom:6px}
+.callout .n{font-weight:700;font-size:14px;color:#fff;line-height:1.3}
+.callout .m{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.callout .m div{color:var(--dim);font-size:10px;letter-spacing:.1em}
+.callout .m b{display:block;color:var(--green);font-size:15px;letter-spacing:0}
+.callout .dt{color:var(--dim);font-size:11px;margin-top:2px}
+.tip{position:fixed;z-index:20;pointer-events:none;padding:7px 10px;background:rgba(8,3,18,.92);border:1px solid var(--line);
+  font-size:11px;line-height:1.45;white-space:nowrap;opacity:0;transition:opacity .08s}
+.tip b{color:var(--gold)}
+.primary{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:min(580px,94%);text-align:center;
+  padding:12px 16px 13px;border:1px solid rgba(255,204,77,.5);background:linear-gradient(180deg,rgba(34,16,66,.8),rgba(16,7,34,.85));
+  box-shadow:0 0 30px rgba(255,204,77,.15),inset 0 0 24px rgba(255,204,77,.05);}
+.primary .pl{font-size:10px;letter-spacing:.3em;color:var(--gold)}
+.primary .cd{font-size:30px;font-weight:700;margin-top:4px;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.04em;text-shadow:0 0 18px rgba(255,204,77,.5)}
+.primary .cd small{font-size:13px;color:var(--gold);margin:0 8px 0 2px;font-weight:500}
+.primary .ps{color:var(--dim);font-size:11px;letter-spacing:.1em;margin-top:2px}
+
+/* console */
+.term{position:absolute;left:50%;transform:translateX(-50%);bottom:122px;width:min(700px,96%);max-height:min(300px,42%);display:none;flex-direction:column;
+  border:1px solid rgba(61,255,154,.45);background:rgba(6,3,14,.9);box-shadow:0 0 30px rgba(61,255,154,.12);}
+.term.on{display:flex}
+.term .th{display:flex;align-items:center;padding:7px 12px;border-bottom:1px solid rgba(61,255,154,.25);color:var(--green);letter-spacing:.2em;font-size:10px}
+.term .th button{margin-left:auto;background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;line-height:1}
+.term .th button:hover{color:#fff}
+.tb{padding:10px 14px;overflow-y:auto;flex:1;min-height:60px;scrollbar-width:thin;scrollbar-color:#2c5a45 transparent}
+.tb div{white-space:pre-wrap;word-break:break-word}
+.tb .ok{color:var(--green)}.tb .warn{color:var(--gold)}.tb .bad{color:var(--red)}.tb .dim{color:var(--dim)}.tb .echo{color:#fff}.tb .hd{color:var(--gold);letter-spacing:.14em;margin-top:6px}
+.tin{display:flex;gap:8px;padding:8px 12px;border-top:1px solid rgba(61,255,154,.25)}
+.tin span{color:var(--green)}
+.tin input{flex:1;background:none;border:0;outline:none;color:#fff;min-width:0}
+
+@media (max-width:1100px){
+  .os{height:auto;min-height:100vh}
+  .main{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+  .center{order:-1;height:72vh;min-height:520px}
+  .rail{overflow:visible}
+  .status{margin:0}
+}
+@media (max-width:560px){.callout{width:190px;font-size:11px}.primary .cd{font-size:22px}.ns .big{font-size:52px}}
+@media (prefers-reduced-motion:reduce){.gdot{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="os">
+  <header class="top">
+    <div class="brand"><span class="gdot"></span>ATHLETE · OS</div>
+    <div class="status" id="status"></div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <div class="main">
+    <aside class="rail" aria-label="Status">
+      <section class="panel ns">
+        <h2 class="pt">NORTH STAR</h2>
+        <div class="big" id="ns-days">—</div>
+        <div class="sub" id="ns-sub"></div>
+      </section>
+      <section class="panel">
+        <h2 class="pt">BODY VITALS</h2>
+        <div id="vitals"></div>
+      </section>
+      <section class="panel">
+        <h2 class="pt">TODAY'S DIRECTIVES</h2>
+        <div id="dirs"></div>
+      </section>
+    </aside>
+
+    <main class="center" id="center">
+      <canvas id="g" aria-label="3D graph of every activity, grouped by week and spiraling from your first workout to today"></canvas>
+      <div class="callout" id="callout"></div>
+      <div class="term" id="term" role="log" aria-label="OS console">
+        <div class="th"><span id="term-title">OS CONSOLE</span><button id="term-x" aria-label="Close console" type="button">✕</button></div>
+        <div class="tb" id="tb"></div>
+        <form class="tin" id="tform" autocomplete="off"><span>&gt;</span><input id="tcmd" aria-label="Command" placeholder="type a command · help"></form>
+      </div>
+      <div class="primary">
+        <div class="pl">PRIMARY DIRECTIVE · DAYS TO THE START LINE</div>
+        <div class="cd" id="cd">—</div>
+        <div class="ps" id="cd-sub"></div>
+      </div>
+    </main>
+
+    <aside class="rail" aria-label="Command deck">
+      <section class="panel">
+        <h2 class="pt">COMMAND DECK</h2>
+        <div class="deck" id="deck"></div>
+        <button class="newchat" id="newchat" type="button">+ NEW OS CHAT</button>
+      </section>
+      <section class="panel">
+        <h2 class="pt">SEARCH NODES</h2>
+        <input class="search" id="q" type="search" placeholder="name, sport or date…" aria-label="Search nodes">
+        <div class="qc" id="qc"></div>
+      </section>
+      <section class="panel">
+        <h2 class="pt">LEGEND</h2>
+        <div class="leg" id="legend"></div>
+        <div class="note">Node size = duration. Each activity links to its week; weeks link in order, spiraling from your first workout to today. Drag to rotate, scroll to zoom.</div>
+      </section>
+    </aside>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const D = {"fetched":"2026-11-08T11:51:54.188356+00:00","today":"2026-11-08","race":{"name":null,"date":null},"activities":[{"id":25003730022,"name":"Singapore Running","type":"running","start":"2026-11-08 09:14:44","date":"2026-11-08","dist":5513.330078125,"dur":4700.2109375,"load":114.86067199707031,"hr":150.0},{"id":24992304290,"name":"Singapore Running","type":"running","start":"2026-11-07 07:29:34","date":"2026-11-07","dist":12565.48046875,"dur":5751.09521484375,"load":101.81390380859375,"hr":160.0},{"id":24981743256,"name":"Strength","type":"strength_training","start":"2026-11-06 08:17:17","date":"2026-11-06","dist":0,"dur":2195.2109375,"load":51.94268798828125,"hr":123.0},{"id":24958480914,"name":"Strength","type":"strength_training","start":"2026-11-04 08:18:21","date":"2026-11-04","dist":0,"dur":2200.8291015625,"load":26.949966430664062,"hr":116.0},{"id":24951009972,"name":"Singapore Track Running","type":"track_running","start":"2026-11-03 20:37:33","date":"2026-11-03","dist":840.0,"dur":480.4179992675781,"load":11.420211791992188,"hr":146.0},{"id":24950805418,"name":"Singapore Track Running","type":"track_running","start":"2026-11-03 19:30:47","date":"2026-11-03","dist":8160.0,"dur":3385.368896484375,"load":175.058349609375,"hr":167.0},{"id":24934603930,"name":"Strength","type":"strength_training","start":"2026-11-02 08:15:25","date":"2026-11-02","dist":0,"dur":2161.217041015625,"load":48.27409362792969,"hr":131.0},{"id":24910857019,"name":"Singapore Running","type":"running","start":"2026-10-31 07:03:03","date":"2026-10-31","dist":13010.66015625,"dur":6192.369140625,"load":106.34518432617188,"hr":167.0},{"id":24899712708,"name":"Strength","type":"strength_training","start":"2026-10-30 08:19:57","date":"2026-10-30","dist":0,"dur":2237.868896484375,"load":44.10369873046875,"hr":136.0},{"id":24880055840,"name":"Strength","type":"strength_training","start":"2026-10-28 18:49:53","date":"2026-10-28","dist":0,"dur":2164.626953125,"load":29.05487060546875,"hr":119.0},{"id":24868002128,"name":"Singapore Track Running","type":"track_running","start":"2026-10-27 19:06:04","date":"2026-10-27","dist":5300.0,"dur":2518.465087890625,"load":102.82730102539062,"hr":151.0},{"id":24855304980,"name":"Strength","type":"strength_training","start":"2026-10-26 17:50:16","date":"2026-10-26","dist":0,"dur":2224.875,"load":15.8946533203125,"hr":110.0},{"id":24848688724,"name":"HIIT","type":"hiit","start":"2026-10-25 08:39:44","date":"2026-10-25","dist":0,"dur":4206.76708984375,"load":65.87409973144531,"hr":128.0},{"id":24848687792,"name":"Strength","type":"strength_training","start":"2026-10-23 08:20:26","date":"2026-10-23","dist":0,"dur":2836.06103515625,"load":5.6179656982421875,"hr":103.0},{"id":24801109076,"name":"Singapore Running","type":"running","start":"2026-10-21 18:06:06","date":"2026-10-21","dist":5002.009765625,"dur":2343.241943359375,"load":47.28855895996094,"hr":161.0},{"id":24752263174,"name":"Makkah Walking","type":"walking","start":"2026-10-17 08:47:38","date":"2026-10-17","dist":951.469970703125,"dur":2400.47900390625,"load":7.3074951171875,"hr":110.0},{"id":24730856716,"name":"Makkah Walking","type":"walking","start":"2026-10-15 10:14:59","date":"2026-10-15","dist":3657.860107421875,"dur":4829.39306640625,"load":16.56317138671875,"hr":100.0},{"id":24710532946,"name":"Walking","type":"walking","start":"2026-10-13 18:25:24","date":"2026-10-13","dist":581.8699951171875,"dur":1262.3360595703125,"load":2.50860595703125,"hr":91.0},{"id":24710114015,"name":"Walking","type":"walking","start":"2026-10-13 16:52:14","date":"2026-10-13","dist":1412.6099853515625,"dur":2925.637939453125,"load":3.025787353515625,"hr":92.0},{"id":24549864191,"name":"Strength","type":"strength_training","start":"2026-09-30 12:37:52","date":"2026-09-30","dist":0,"dur":2288.85791015625,"load":11.89117431640625,"hr":110.0},{"id":24526891912,"name":"Strength","type":"strength_training","start":"2026-09-28 17:52:22","date":"2026-09-28","dist":0,"dur":1990.343994140625,"load":18.351913452148438,"hr":115.0},{"id":24511331358,"name":"Singapore Running","type":"running","start":"2026-09-27 07:01:26","date":"2026-09-27","dist":17010.55078125,"dur":7687.41015625,"load":127.3353271484375,"hr":162.0},{"id":24488496753,"name":"Strength","type":"strength_training","start":"2026-09-25 08:14:36","date":"2026-09-25","dist":0,"dur":2241.490966796875,"load":6.5814971923828125,"hr":104.0},{"id":24480443409,"name":"Singapore Track Running","type":"track_running","start":"2026-09-24 17:57:07","date":"2026-09-24","dist":11390.0,"dur":4731.5380859375,"load":196.04421997070312,"hr":167.0},{"id":24463561129,"name":"Strength","type":"strength_training","start":"2026-09-23 08:15:18","date":"2026-09-23","dist":0,"dur":2182.8759765625,"load":18.316390991210938,"hr":116.0},{"id":24438200687,"name":"Strength","type":"strength_training","start":"2026-09-21 08:19:53","date":"2026-09-21","dist":0,"dur":2169.712890625,"load":10.778488159179688,"hr":113.0},{"id":24426013718,"name":"Singapore Running","type":"running","start":"2026-09-20 06:57:08","date":"2026-09-20","dist":16004.1904296875,"dur":7363.462890625,"load":110.62533569335938,"hr":159.0},{"id":24402534346,"name":"Strength","type":"strength_training","start":"2026-09-18 08:12:34","date":"2026-09-18","dist":0,"dur":2164.83203125,"load":8.847061157226562,"hr":109.0},{"id":24395091858,"name":"Singapore Track Running","type":"track_running","start":"2026-09-17 18:52:12","date":"2026-09-17","dist":8650.0,"dur":3570.946044921875,"load":158.7064208984375,"hr":158.0},{"id":24378059786,"name":"Strength","type":"strength_training","start":"2026-09-16 08:17:23","date":"2026-09-16","dist":0,"dur":2263.967041015625,"load":17.6136474609375,"hr":112.0},{"id":24352236241,"name":"Strength","type":"strength_training","start":"2026-09-14 08:19:27","date":"2026-09-14","dist":0,"dur":2116.217041015625,"load":9.679458618164062,"hr":105.0},{"id":24340549048,"name":"Singapore Hiking","type":"hiking","start":"2026-09-13 08:54:47","date":"2026-09-13","dist":7516.22021484375,"dur":8675.431640625,"load":23.511016845703125,"hr":116.0},{"id":24327424702,"name":"HIIT","type":"hiit","start":"2026-09-12 08:12:34","date":"2026-09-12","dist":0,"dur":2325.097900390625,"load":93.28570556640625,"hr":154.0},{"id":24327091668,"name":"Singapore Running","type":"running","start":"2026-09-12 07:30:27","date":"2026-09-12","dist":5004.830078125,"dur":1578.25,"load":202.82118225097656,"hr":186.0},{"id":24316370546,"name":"Strength","type":"strength_training","start":"2026-09-11 08:12:58","date":"2026-09-11","dist":0,"dur":2178.16796875,"load":12.68914794921875,"hr":109.0},{"id":24307976106,"name":"Singapore - Base","type":"running","start":"2026-09-10 18:21:50","date":"2026-09-10","dist":6002.7900390625,"dur":2680.158935546875,"load":73.20414733886719,"hr":156.0},{"id":24292364384,"name":"Strength","type":"strength_training","start":"2026-09-09 12:34:20","date":"2026-09-09","dist":0,"dur":2177.26708984375,"load":11.524673461914062,"hr":102.0},{"id":24283118613,"name":"Singapore Track Running","type":"track_running","start":"2026-09-08 19:05:02","date":"2026-09-08","dist":6830.0,"dur":3037.050048828125,"load":138.51463317871094,"hr":149.0},{"id":24265702855,"name":"Strength","type":"strength_training","start":"2026-09-07 08:13:06","date":"2026-09-07","dist":0,"dur":2159.0439453125,"load":7.1626434326171875,"hr":98.0},{"id":24253030785,"name":"Singapore Running","type":"running","start":"2026-09-06 06:36:23","date":"2026-09-06","dist":15013.0703125,"dur":6891.7080078125,"load":113.29222106933594,"hr":161.0},{"id":24229725458,"name":"Strength","type":"strength_training","start":"2026-09-04 08:16:45","date":"2026-09-04","dist":0,"dur":2199.491943359375,"load":16.211868286132812,"hr":118.0},{"id":24221596727,"name":"Singapore Running","type":"running","start":"2026-09-03 18:37:33","date":"2026-09-03","dist":6005.85009765625,"dur":2673.64990234375,"load":55.960540771484375,"hr":155.0},{"id":24208091964,"name":"Strength","type":"strength_training","start":"2026-09-02 17:47:45","date":"2026-09-02","dist":0,"dur":2168.83203125,"load":9.96820068359375,"hr":106.0},{"id":24196248809,"name":"Singapore Track Running","type":"track_running","start":"2026-09-01 19:23:37","date":"2026-09-01","dist":8510.0,"dur":3372.0029296875,"load":168.4482879638672,"hr":163.0},{"id":24178736006,"name":"Strength","type":"strength_training","start":"2026-08-31 08:16:04","date":"2026-08-31","dist":0,"dur":2166.18798828125,"load":14.019927978515625,"hr":107.0},{"id":24166869712,"name":"Singapore Hiking","type":"hiking","start":"2026-08-30 09:58:50","date":"2026-08-30","dist":5315.35009765625,"dur":6520.22802734375,"load":35.451629638671875,"hr":120.0},{"id":24154226335,"name":"Singapore Running","type":"running","start":"2026-08-29 06:54:33","date":"2026-08-29","dist":14003.6904296875,"dur":6518.93212890625,"load":94.76406860351562,"hr":158.0},{"id":24143055142,"name":"Strength","type":"strength_training","start":"2026-08-28 08:17:47","date":"2026-08-28","dist":0,"dur":2235.64990234375,"load":4.3655548095703125,"hr":92.0},{"id":24134850835,"name":"Singapore Running","type":"running","start":"2026-08-27 18:21:16","date":"2026-08-27","dist":7008.64013671875,"dur":3148.116943359375,"load":59.995147705078125,"hr":153.0},{"id":24121730448,"name":"Strength","type":"strength_training","start":"2026-08-26 17:51:48","date":"2026-08-26","dist":0,"dur":2763.90087890625,"load":3.4621124267578125,"hr":94.0},{"id":24109550274,"name":"Singapore Track Running","type":"track_running","start":"2026-08-25 19:17:55","date":"2026-08-25","dist":7830.0,"dur":3280.716064453125,"load":161.33206176757812,"hr":157.0},{"id":24091533075,"name":"Strength","type":"strength_training","start":"2026-08-24 08:18:33","date":"2026-08-24","dist":0,"dur":2138.553955078125,"load":23.7017822265625,"hr":115.0},{"id":24066749969,"name":"Singapore Running","type":"running","start":"2026-08-22 06:50:22","date":"2026-08-22","dist":14008.740234375,"dur":6352.455078125,"load":99.83946228027344,"hr":156.0},{"id":24055438867,"name":"Strength","type":"strength_training","start":"2026-08-21 08:16:49","date":"2026-08-21","dist":0,"dur":2135.840087890625,"load":11.812942504882812,"hr":109.0},{"id":24047315961,"name":"Singapore Running","type":"running","start":"2026-08-20 18:18:24","date":"2026-08-20","dist":6003.64990234375,"dur":2688.903076171875,"load":56.34490966796875,"hr":156.0},{"id":24042940083,"name":"Strength","type":"strength_training","start":"2026-08-19 12:36:09","date":"2026-08-19","dist":0,"dur":2215.39599609375,"load":6.28857421875,"hr":103.0},{"id":24022475782,"name":"Singapore Track Running","type":"track_running","start":"2026-08-18 19:21:26","date":"2026-08-18","dist":10200.0,"dur":4156.48583984375,"load":186.89288330078125,"hr":160.0},{"id":24004685208,"name":"Strength","type":"strength_training","start":"2026-08-17 08:16:05","date":"2026-08-17","dist":0,"dur":2177.672119140625,"load":5.4487762451171875,"hr":96.0},{"id":23998290487,"name":"Singapore Running","type":"running","start":"2026-08-16 18:03:48","date":"2026-08-16","dist":13003.1201171875,"dur":5815.52490234375,"load":97.8204345703125,"hr":157.0},{"id":23979915881,"name":"Singapore Running","type":"running","start":"2026-08-15 06:59:20","date":"2026-08-15","dist":6010.0498046875,"dur":2734.35595703125,"load":54.90077209472656,"hr":157.0},{"id":23968756086,"name":"Strength","type":"strength_training","start":"2026-08-14 08:16:32","date":"2026-08-14","dist":0,"dur":2115.52587890625,"load":19.847763061523438,"hr":111.0},{"id":23960770624,"name":"Singapore Running","type":"running","start":"2026-08-13 18:12:57","date":"2026-08-13","dist":6010.22998046875,"dur":2688.5400390625,"load":57.07597351074219,"hr":154.0},{"id":23944662237,"name":"Strength","type":"strength_training","start":"2026-08-12 12:33:50","date":"2026-08-12","dist":0,"dur":2177.422119140625,"load":35.28285217285156,"hr":123.0},{"id":23935776682,"name":"Singapore Track Running","type":"track_running","start":"2026-08-11 19:19:13","date":"2026-08-11","dist":8340.0,"dur":3446.64794921875,"load":186.39938354492188,"hr":159.0},{"id":23917525971,"name":"Strength","type":"strength_training","start":"2026-08-10 08:18:52","date":"2026-08-10","dist":0,"dur":2161.780029296875,"load":12.809280395507812,"hr":103.0},{"id":23910704760,"name":"Singapore Running","type":"running","start":"2026-08-09 18:05:53","date":"2026-08-09","dist":13006.759765625,"dur":5902.83203125,"load":103.41764831542969,"hr":156.0},{"id":23893136403,"name":"HIIT","type":"hiit","start":"2026-08-08 08:17:51","date":"2026-08-08","dist":0,"dur":2377.8759765625,"load":74.93063354492188,"hr":142.0},{"id":23881846940,"name":"Strength","type":"strength_training","start":"2026-08-07 08:19:05","date":"2026-08-07","dist":0,"dur":2255.947998046875,"load":14.600631713867188,"hr":114.0},{"id":23869387884,"name":"Treadmill Running","type":"treadmill_running","start":"2026-08-06 08:48:16","date":"2026-08-06","dist":6100.0,"dur":2822.1240234375,"load":91.21786499023438,"hr":154.0},{"id":23857325142,"name":"Strength","type":"strength_training","start":"2026-08-05 12:32:36","date":"2026-08-05","dist":0,"dur":2255.56689453125,"load":12.932571411132812,"hr":109.0},{"id":23848073411,"name":"Singapore Track Running","type":"track_running","start":"2026-08-04 19:06:40","date":"2026-08-04","dist":8140.0,"dur":3200.25,"load":174.10316467285156,"hr":164.0},{"id":23830581932,"name":"Strength","type":"strength_training","start":"2026-08-03 08:20:51","date":"2026-08-03","dist":0,"dur":2218.840087890625,"load":23.024826049804688,"hr":111.0},{"id":23823106085,"name":"Singapore Running","type":"running","start":"2026-08-02 17:34:25","date":"2026-08-02","dist":12006.3095703125,"dur":5505.70703125,"load":97.79791259765625,"hr":158.0},{"id":23806371747,"name":"HIIT","type":"hiit","start":"2026-08-01 08:16:31","date":"2026-08-01","dist":0,"dur":2097.48095703125,"load":75.7747802734375,"hr":144.0},{"id":23806070945,"name":"Singapore Running","type":"running","start":"2026-08-01 07:15:07","date":"2026-08-01","dist":5507.740234375,"dur":2471.672119140625,"load":55.62117004394531,"hr":159.0},{"id":23795134288,"name":"Strength","type":"strength_training","start":"2026-07-31 08:17:50","date":"2026-07-31","dist":0,"dur":2187.136962890625,"load":5.2750244140625,"hr":95.0},{"id":23787029551,"name":"Singapore - Base","type":"running","start":"2026-07-30 18:04:52","date":"2026-07-30","dist":6010.4599609375,"dur":2665.751953125,"load":61.27412414550781,"hr":152.0},{"id":23775079796,"name":"Strength","type":"strength_training","start":"2026-07-29 17:47:38","date":"2026-07-29","dist":0,"dur":2264.68603515625,"load":7.17852783203125,"hr":99.0},{"id":23762263803,"name":"Singapore Track Running","type":"track_running","start":"2026-07-28 19:17:13","date":"2026-07-28","dist":7700.0,"dur":3069.326904296875,"load":173.80712890625,"hr":160.0},{"id":23748217146,"name":"Strength","type":"strength_training","start":"2026-07-27 17:53:36","date":"2026-07-27","dist":0,"dur":2170.194091796875,"load":9.051803588867188,"hr":102.0},{"id":23738134479,"name":"Singapore Running","type":"running","start":"2026-07-26 17:52:36","date":"2026-07-26","dist":12007.9296875,"dur":5305.43701171875,"load":120.47935485839844,"hr":160.0},{"id":23738133940,"name":"HIIT","type":"hiit","start":"2026-07-25 08:19:47","date":"2026-07-25","dist":0,"dur":2128.799072265625,"load":13.852798461914062,"hr":113.0},{"id":23709754554,"name":"Strength","type":"strength_training","start":"2026-07-24 08:19:30","date":"2026-07-24","dist":0,"dur":2173.902099609375,"load":30.778656005859375,"hr":116.0},{"id":23701095655,"name":"Singapore Running","type":"running","start":"2026-07-23 17:43:01","date":"2026-07-23","dist":6005.60009765625,"dur":2598.800048828125,"load":78.54252624511719,"hr":157.0},{"id":23685955170,"name":"Strength","type":"strength_training","start":"2026-07-22 12:34:43","date":"2026-07-22","dist":0,"dur":2293.760009765625,"load":22.10845947265625,"hr":106.0},{"id":23677119195,"name":"Singapore Track Running","type":"track_running","start":"2026-07-21 19:23:38","date":"2026-07-21","dist":8210.0,"dur":3317.037109375,"load":172.3504638671875,"hr":160.0},{"id":23659821315,"name":"Strength","type":"strength_training","start":"2026-07-20 08:19:58","date":"2026-07-20","dist":0,"dur":2219.949951171875,"load":11.22039794921875,"hr":103.0},{"id":23652810568,"name":"Singapore - Long Run","type":"running","start":"2026-07-19 18:21:52","date":"2026-07-19","dist":8761.0302734375,"dur":3961.511962890625,"load":89.09996032714844,"hr":159.0},{"id":23636295494,"name":"Singapore Running","type":"running","start":"2026-07-18 08:15:12","date":"2026-07-18","dist":4005.06005859375,"dur":1781.7430419921875,"load":51.16407775878906,"hr":158.0},{"id":23625500947,"name":"Strength","type":"strength_training","start":"2026-07-17 08:22:12","date":"2026-07-17","dist":0,"dur":2216.591064453125,"load":50.38238525390625,"hr":127.0},{"id":23602468320,"name":"Strength","type":"strength_training","start":"2026-07-15 12:32:05","date":"2026-07-15","dist":0,"dur":2167.764892578125,"load":32.493377685546875,"hr":113.0},{"id":23594111083,"name":"Singapore Track Running","type":"track_running","start":"2026-07-14 19:18:12","date":"2026-07-14","dist":8600.0,"dur":3559.739990234375,"load":209.7266845703125,"hr":163.0},{"id":23576475747,"name":"Strength","type":"strength_training","start":"2026-07-13 08:23:02","date":"2026-07-13","dist":0,"dur":2167.4619140625,"load":9.777511596679688,"hr":104.0},{"id":23564911080,"name":"HIIT","type":"hiit","start":"2026-07-12 08:36:09","date":"2026-07-12","dist":0,"dur":4264.26318359375,"load":92.57662963867188,"hr":130.0},{"id":23553163030,"name":"Singapore Running","type":"running","start":"2026-07-11 07:29:27","date":"2026-07-11","dist":15092.1201171875,"dur":6099.00390625,"load":220.4217071533203,"hr":168.0},{"id":23542260816,"name":"Strength","type":"strength_training","start":"2026-07-10 08:22:58","date":"2026-07-10","dist":0,"dur":2132.22802734375,"load":29.1168212890625,"hr":115.0},{"id":23531170589,"name":"HIIT","type":"hiit","start":"2026-07-09 12:30:17","date":"2026-07-09","dist":0,"dur":2400.31298828125,"load":73.83802795410156,"hr":140.0},{"id":23518666501,"name":"Strength","type":"strength_training","start":"2026-07-08 12:34:27","date":"2026-07-08","dist":0,"dur":2256.251953125,"load":13.486846923828125,"hr":106.0},{"id":23510213176,"name":"Singapore Track Running","type":"track_running","start":"2026-07-07 19:17:50","date":"2026-07-07","dist":8920.0,"dur":3772.68603515625,"load":181.39089965820312,"hr":163.0},{"id":23496904613,"name":"Strength","type":"strength_training","start":"2026-07-06 17:51:28","date":"2026-07-06","dist":0,"dur":2129.904052734375,"load":13.492645263671875,"hr":106.0},{"id":23486551789,"name":"Singapore - Base","type":"running","start":"2026-07-05 18:17:49","date":"2026-07-05","dist":6195.39013671875,"dur":2823.053955078125,"load":61.27516174316406,"hr":156.0},{"id":23459849596,"name":"Strength","type":"strength_training","start":"2026-07-03 08:24:34","date":"2026-07-03","dist":0,"dur":2872.68701171875,"load":20.368515014648438,"hr":115.0},{"id":23449390692,"name":"HIIT","type":"hiit","start":"2026-07-02 12:30:15","date":"2026-07-02","dist":0,"dur":2195.968017578125,"load":74.09866333007812,"hr":144.0},{"id":23437705004,"name":"Strength","type":"strength_training","start":"2026-07-01 12:36:08","date":"2026-07-01","dist":0,"dur":2325.35400390625,"load":23.2078857421875,"hr":109.0},{"id":23429212617,"name":"Singapore Track Running","type":"track_running","start":"2026-06-30 19:13:43","date":"2026-06-30","dist":6450.0,"dur":2741.032958984375,"load":211.2618865966797,"hr":159.0},{"id":23412951482,"name":"Strength","type":"strength_training","start":"2026-06-29 08:21:11","date":"2026-06-29","dist":0,"dur":2260.056884765625,"load":16.2510986328125,"hr":108.0},{"id":23406031419,"name":"Singapore Running","type":"running","start":"2026-06-28 17:19:01","date":"2026-06-28","dist":10009.7998046875,"dur":4568.537109375,"load":99.58615112304688,"hr":159.0},{"id":23380973139,"name":"Strength","type":"strength_training","start":"2026-06-26 08:20:44","date":"2026-06-26","dist":0,"dur":2188.287109375,"load":14.384613037109375,"hr":115.0},{"id":23371065552,"name":"HIIT","type":"hiit","start":"2026-06-25 12:29:03","date":"2026-06-25","dist":0,"dur":2241.00390625,"load":35.517486572265625,"hr":124.0},{"id":23359462856,"name":"Strength","type":"strength_training","start":"2026-06-24 12:37:09","date":"2026-06-24","dist":0,"dur":2059.506103515625,"load":10.984573364257812,"hr":111.0},{"id":23351372010,"name":"Singapore - 3x10mins Threshold","type":"track_running","start":"2026-06-23 19:22:38","date":"2026-06-23","dist":8790.0,"dur":3576.64111328125,"load":171.5775146484375,"hr":163.0},{"id":23335884407,"name":"Strength","type":"strength_training","start":"2026-06-22 12:45:10","date":"2026-06-22","dist":0,"dur":1808.905029296875,"load":4.082275390625,"hr":91.0},{"id":23323422055,"name":"Singapore Running","type":"running","start":"2026-06-21 07:52:36","date":"2026-06-21","dist":4826.18017578125,"dur":1710.43701171875,"load":183.44215393066406,"hr":167.0},{"id":23311458644,"name":"HIIT","type":"hiit","start":"2026-06-20 08:13:17","date":"2026-06-20","dist":0,"dur":2192.695068359375,"load":57.99977111816406,"hr":138.0},{"id":23311141252,"name":"Singapore Running","type":"running","start":"2026-06-20 07:27:20","date":"2026-06-20","dist":3302.0400390625,"dur":1334.342041015625,"load":72.64047241210938,"hr":163.0},{"id":23300803575,"name":"Strength","type":"strength_training","start":"2026-06-19 08:20:23","date":"2026-06-19","dist":0,"dur":2182.366943359375,"load":22.000869750976562,"hr":115.0},{"id":23290302535,"name":"HIIT","type":"hiit","start":"2026-06-18 12:32:31","date":"2026-06-18","dist":0,"dur":2257.410888671875,"load":80.27436828613281,"hr":140.0},{"id":23276838087,"name":"Strength","type":"strength_training","start":"2026-06-17 08:19:27","date":"2026-06-17","dist":0,"dur":2191.0859375,"load":16.978790283203125,"hr":115.0},{"id":23268843834,"name":"Singapore Track Running","type":"track_running","start":"2026-06-16 19:28:02","date":"2026-06-16","dist":6840.0,"dur":2644.419921875,"load":172.4139404296875,"hr":170.0},{"id":23255242257,"name":"Strength","type":"strength_training","start":"2026-06-15 17:51:27","date":"2026-06-15","dist":0,"dur":2014.407958984375,"load":33.70372009277344,"hr":116.0},{"id":23244845495,"name":"Singapore - Base","type":"running","start":"2026-06-14 18:03:16","date":"2026-06-14","dist":7458.81982421875,"dur":3421.884033203125,"load":70.36083984375,"hr":157.0},{"id":23228533212,"name":"HIIT","type":"hiit","start":"2026-06-13 08:18:43","date":"2026-06-13","dist":0,"dur":2496.56689453125,"load":134.83302307128906,"hr":140.0},{"id":23217885647,"name":"Strength","type":"strength_training","start":"2026-06-12 08:18:39","date":"2026-06-12","dist":0,"dur":2173.240966796875,"load":40.005828857421875,"hr":123.0},{"id":23207524101,"name":"HIIT","type":"hiit","start":"2026-06-11 12:31:46","date":"2026-06-11","dist":0,"dur":2314.277099609375,"load":63.30747985839844,"hr":133.0},{"id":23194381019,"name":"Strength","type":"strength_training","start":"2026-06-10 08:21:24","date":"2026-06-10","dist":0,"dur":2157.31494140625,"load":22.131011962890625,"hr":115.0},{"id":23186441403,"name":"Singapore Track Running","type":"track_running","start":"2026-06-09 19:09:13","date":"2026-06-09","dist":5850.0,"dur":2423.801025390625,"load":182.74752807617188,"hr":164.0},{"id":23170003795,"name":"Strength","type":"strength_training","start":"2026-06-08 08:24:05","date":"2026-06-08","dist":0,"dur":2263.02197265625,"load":24.9193115234375,"hr":119.0},{"id":23162083569,"name":"Singapore - Base","type":"running","start":"2026-06-07 18:15:53","date":"2026-06-07","dist":6067.919921875,"dur":2768.4560546875,"load":68.17601013183594,"hr":158.0},{"id":23145481518,"name":"HIIT","type":"hiit","start":"2026-06-06 08:23:35","date":"2026-06-06","dist":0,"dur":2000.697998046875,"load":70.96804809570312,"hr":136.0},{"id":23145173614,"name":"Singapore - Base","type":"running","start":"2026-06-06 07:25:45","date":"2026-06-06","dist":4434.10986328125,"dur":1921.666015625,"load":67.81106567382812,"hr":161.0},{"id":23134593075,"name":"Strength","type":"strength_training","start":"2026-06-05 08:18:20","date":"2026-06-05","dist":0,"dur":2305.593017578125,"load":19.7230224609375,"hr":109.0},{"id":23123724896,"name":"HIIT","type":"hiit","start":"2026-06-04 12:31:53","date":"2026-06-04","dist":0,"dur":2370.030029296875,"load":88.603271484375,"hr":140.0},{"id":23110362598,"name":"Strength","type":"strength_training","start":"2026-06-03 08:19:15","date":"2026-06-03","dist":0,"dur":2176.847900390625,"load":13.875930786132812,"hr":108.0},{"id":23102903920,"name":"Singapore Track Running","type":"track_running","start":"2026-06-02 19:17:58","date":"2026-06-02","dist":8400.0,"dur":3448.2060546875,"load":298.1577453613281,"hr":168.0},{"id":23085858415,"name":"Strength","type":"strength_training","start":"2026-06-01 08:19:53","date":"2026-06-01","dist":0,"dur":2359.009033203125,"load":4.6453857421875,"hr":98.0},{"id":23061800475,"name":"HIIT","type":"hiit","start":"2026-05-30 08:18:14","date":"2026-05-30","dist":0,"dur":2029.6719970703125,"load":63.50886535644531,"hr":142.0},{"id":23061339283,"name":"Singapore Running","type":"running","start":"2026-05-30 07:37:22","date":"2026-05-30","dist":3244.35009765625,"dur":1201.3780517578125,"load":96.31787109375,"hr":170.0},{"id":23050539663,"name":"Strength","type":"strength_training","start":"2026-05-29 08:17:00","date":"2026-05-29","dist":0,"dur":2222.822998046875,"load":29.668807983398438,"hr":122.0},{"id":23038464024,"name":"HIIT","type":"hiit","start":"2026-05-28 08:27:30","date":"2026-05-28","dist":0,"dur":1952.8360595703125,"load":40.4830322265625,"hr":135.0},{"id":23018536508,"name":"Singapore Track Running","type":"track_running","start":"2026-05-26 19:07:19","date":"2026-05-26","dist":7490.0,"dur":3315.489013671875,"load":232.96560668945312,"hr":171.0},{"id":23005759134,"name":"Strength","type":"strength_training","start":"2026-05-25 18:49:45","date":"2026-05-25","dist":0,"dur":2228.571044921875,"load":11.410476684570312,"hr":109.0},{"id":22993842695,"name":"Singapore Running","type":"running","start":"2026-05-24 18:10:05","date":"2026-05-24","dist":6149.22021484375,"dur":2880.423095703125,"load":77.6546630859375,"hr":160.0},{"id":22977332711,"name":"HIIT","type":"hiit","start":"2026-05-23 08:15:51","date":"2026-05-23","dist":0,"dur":2090.715087890625,"load":31.954025268554688,"hr":125.0},{"id":22966411115,"name":"Strength","type":"strength_training","start":"2026-05-22 08:17:41","date":"2026-05-22","dist":0,"dur":2277.152099609375,"load":24.697219848632812,"hr":116.0},{"id":22954596531,"name":"HIIT","type":"hiit","start":"2026-05-21 08:12:11","date":"2026-05-21","dist":0,"dur":2228.35498046875,"load":79.51820373535156,"hr":143.0},{"id":22943660255,"name":"Strength","type":"strength_training","start":"2026-05-20 12:32:34","date":"2026-05-20","dist":0,"dur":2268.721923828125,"load":23.919097900390625,"hr":116.0},{"id":22935059595,"name":"Singapore Track Running","type":"track_running","start":"2026-05-19 19:16:21","date":"2026-05-19","dist":7240.0,"dur":3279.779052734375,"load":462.9162902832031,"hr":171.0},{"id":22921701438,"name":"Strength","type":"strength_training","start":"2026-05-18 17:49:58","date":"2026-05-18","dist":0,"dur":2121.419921875,"load":14.830368041992188,"hr":114.0},{"id":22906591593,"name":"Singapore Running","type":"running","start":"2026-05-17 07:24:50","date":"2026-05-17","dist":5008.47998046875,"dur":2280.909912109375,"load":82.58148193359375,"hr":162.0},{"id":22895357918,"name":"HIIT","type":"hiit","start":"2026-05-16 08:16:34","date":"2026-05-16","dist":0,"dur":2311.48095703125,"load":75.08427429199219,"hr":146.0},{"id":22895035912,"name":"Singapore Running","type":"running","start":"2026-05-16 07:37:56","date":"2026-05-16","dist":3121.9599609375,"dur":1200.4930419921875,"load":101.12031555175781,"hr":175.0},{"id":22888637142,"name":"Singapore Running","type":"running","start":"2026-05-15 18:31:28","date":"2026-05-15","dist":5733.77978515625,"dur":3123.5458984375,"load":36.658416748046875,"hr":140.0},{"id":22884673498,"name":"Strength","type":"strength_training","start":"2026-05-15 08:18:49","date":"2026-05-15","dist":0,"dur":2216.464111328125,"load":14.289443969726562,"hr":117.0},{"id":22873053028,"name":"HIIT","type":"hiit","start":"2026-05-14 08:12:40","date":"2026-05-14","dist":0,"dur":2342.337890625,"load":80.93336486816406,"hr":145.0},{"id":22861564332,"name":"Strength","type":"strength_training","start":"2026-05-13 08:18:15","date":"2026-05-13","dist":0,"dur":2161.06005859375,"load":27.973251342773438,"hr":123.0},{"id":22837887056,"name":"Strength","type":"strength_training","start":"2026-05-11 07:19:32","date":"2026-05-11","dist":0,"dur":2172.39794921875,"load":20.437698364257812,"hr":123.0},{"id":22826122687,"name":"Singapore Running","type":"running","start":"2026-05-10 07:07:44","date":"2026-05-10","dist":6180.56982421875,"dur":3615.402099609375,"load":32.58854675292969,"hr":145.0},{"id":22814477023,"name":"HIIT","type":"hiit","start":"2026-05-09 08:21:48","date":"2026-05-09","dist":0,"dur":2283.1890000000003,"load":69.04631042480469,"hr":144.0},{"id":22803209473,"name":"Strength","type":"strength_training","start":"2026-05-08 08:16:51","date":"2026-05-08","dist":0,"dur":2223.073974609375,"load":30.942657470703125,"hr":122.0},{"id":22791617859,"name":"HIIT","type":"hiit","start":"2026-05-07 08:16:24","date":"2026-05-07","dist":0,"dur":2262.64599609375,"load":71.90225219726562,"hr":147.0},{"id":22779839594,"name":"Strength","type":"strength_training","start":"2026-05-06 08:17:51","date":"2026-05-06","dist":0,"dur":2310.340087890625,"load":13.931396484375,"hr":117.0},{"id":22759713217,"name":"Strength","type":"strength_training","start":"2026-05-04 18:48:49","date":"2026-05-04","dist":0,"dur":2169.77197265625,"load":12.559051513671875,"hr":115.0},{"id":22747994427,"name":"Singapore - Long Run","type":"running","start":"2026-05-03 17:56:05","date":"2026-05-03","dist":6704.509765625,"dur":3156.01904296875,"load":82.6015625,"hr":159.0},{"id":22731934819,"name":"HIIT","type":"hiit","start":"2026-05-02 08:14:25","date":"2026-05-02","dist":0,"dur":2219.466064453125,"load":75.76043701171875,"hr":148.0},{"id":22731596540,"name":"Singapore Running","type":"running","start":"2026-05-02 07:20:49","date":"2026-05-02","dist":4507.7001953125,"dur":1720.676025390625,"load":140.70130920410156,"hr":177.0},{"id":22719718881,"name":"Strength","type":"strength_training","start":"2026-05-01 08:17:55","date":"2026-05-01","dist":0,"dur":2237.278076171875,"load":51.85661315917969,"hr":133.0},{"id":22708599340,"name":"HIIT","type":"hiit","start":"2026-04-30 08:16:04","date":"2026-04-30","dist":0,"dur":2289.694091796875,"load":95.89454650878906,"hr":149.0},{"id":22696693330,"name":"Indoor Cycling","type":"indoor_cycling","start":"2026-04-29 09:15:51","date":"2026-04-29","dist":5850.0,"dur":909.2379760742188,"load":25.441543579101562,"hr":140.0},{"id":22696572698,"name":"Strength","type":"strength_training","start":"2026-04-29 08:22:17","date":"2026-04-29","dist":0,"dur":2172.177978515625,"load":57.462249755859375,"hr":134.0},{"id":22672265195,"name":"Strength","type":"strength_training","start":"2026-04-27 08:22:25","date":"2026-04-27","dist":0,"dur":2213.14111328125,"load":44.89125061035156,"hr":129.0},{"id":22664221049,"name":"Singapore - Z2 - 50mins","type":"running","start":"2026-04-26 17:56:38","date":"2026-04-26","dist":6105.1298828125,"dur":3044.881103515625,"load":52.42652893066406,"hr":157.0},{"id":22647991363,"name":"HIIT","type":"hiit","start":"2026-04-25 08:18:17","date":"2026-04-25","dist":0,"dur":2305.537109375,"load":77.38706970214844,"hr":145.0},{"id":22647682991,"name":"Singapore Running","type":"running","start":"2026-04-25 07:30:17","date":"2026-04-25","dist":4006.760009765625,"dur":1568.4940185546875,"load":133.9445037841797,"hr":177.0},{"id":22637059833,"name":"Strength","type":"strength_training","start":"2026-04-24 08:20:26","date":"2026-04-24","dist":0,"dur":2232.076904296875,"load":43.9676513671875,"hr":126.0},{"id":22625155784,"name":"HIIT","type":"hiit","start":"2026-04-23 08:19:16","date":"2026-04-23","dist":0,"dur":2334.37890625,"load":108.41365051269531,"hr":144.0},{"id":22612766398,"name":"Strength","type":"strength_training","start":"2026-04-22 08:17:15","date":"2026-04-22","dist":0,"dur":2124.488037109375,"load":40.43833923339844,"hr":127.0},{"id":22588547875,"name":"Strength","type":"strength_training","start":"2026-04-20 07:20:25","date":"2026-04-20","dist":0,"dur":2191.97998046875,"load":31.81365966796875,"hr":122.0},{"id":22580852051,"name":"Singapore Running","type":"running","start":"2026-04-19 17:46:24","date":"2026-04-19","dist":6010.9599609375,"dur":2834.427001953125,"load":150.84609985351562,"hr":162.0},{"id":22564782995,"name":"HIIT","type":"hiit","start":"2026-04-18 08:17:58","date":"2026-04-18","dist":0,"dur":2478.219970703125,"load":112.95195007324219,"hr":146.0},{"id":22553682056,"name":"Strength","type":"strength_training","start":"2026-04-17 08:17:01","date":"2026-04-17","dist":0,"dur":2139.549072265625,"load":97.04214477539062,"hr":134.0}],"daily":[{"d":"2026-04-16","rhr":56,"stress":23,"stressMax":93,"bbLatest":52,"bbMax":54,"bbMin":37},{"d":"2026-04-17","rhr":51,"stress":26,"stressMax":97,"bbLatest":18,"bbMax":87,"bbMin":16},{"d":"2026-04-18","rhr":51,"stress":25,"stressMax":98,"bbLatest":27,"bbMax":86,"bbMin":18},{"d":"2026-04-19","rhr":52,"stress":19,"stressMax":90,"bbLatest":19,"bbMax":82,"bbMin":12},{"d":"2026-04-20","rhr":48,"stress":23,"stressMax":96,"bbLatest":21,"bbMax":81,"bbMin":19},{"d":"2026-04-21","rhr":49,"stress":13,"stressMax":63,"bbLatest":5,"bbMax":70,"bbMin":5},{"d":"2026-04-22","rhr":49,"stress":27,"stressMax":84,"bbLatest":19,"bbMax":69,"bbMin":5},{"d":"2026-04-23","rhr":48,"stress":27,"stressMax":95,"bbLatest":22,"bbMax":79,"bbMin":8},{"d":"2026-04-24","rhr":49,"stress":23,"stressMax":95,"bbLatest":30,"bbMax":85,"bbMin":22},{"d":"2026-04-25","rhr":51,"stress":22,"stressMax":93,"bbLatest":26,"bbMax":81,"bbMin":15},{"d":"2026-04-26","rhr":51,"stress":22,"stressMax":91,"bbLatest":17,"bbMax":77,"bbMin":15},{"d":"2026-04-27","rhr":47,"stress":22,"stressMax":98,"bbLatest":29,"bbMax":77,"bbMin":17},{"d":"2026-04-28","rhr":62,"stress":23,"stressMax":36,"bbLatest":5,"bbMax":5,"bbMin":5},{"d":"2026-04-29","rhr":50,"stress":28,"stressMax":89,"bbLatest":19,"bbMax":76,"bbMin":5},{"d":"2026-04-30","rhr":54,"stress":30,"stressMax":87,"bbLatest":18,"bbMax":66,"bbMin":13},{"d":"2026-05-01","rhr":49,"stress":25,"stressMax":96,"bbLatest":44,"bbMax":82,"bbMin":19},{"d":"2026-05-02","rhr":51,"stress":20,"stressMax":96,"bbLatest":56,"bbMax":94,"bbMin":44},{"d":"2026-05-03","rhr":54,"stress":35,"stressMax":90,"bbLatest":11,"bbMax":38,"bbMin":9},{"d":"2026-05-04","rhr":50,"stress":26,"stressMax":95,"bbLatest":19,"bbMax":79,"bbMin":11},{"d":"2026-05-05","rhr":52,"stress":10,"stressMax":57,"bbLatest":11,"bbMax":11,"bbMin":7},{"d":"2026-05-06","rhr":44,"stress":22,"stressMax":93,"bbLatest":29,"bbMax":90,"bbMin":11},{"d":"2026-05-07","rhr":49,"stress":29,"stressMax":92,"bbLatest":15,"bbMax":84,"bbMin":10},{"d":"2026-05-08","rhr":49,"stress":25,"stressMax":95,"bbLatest":22,"bbMax":77,"bbMin":15},{"d":"2026-05-09","rhr":48,"stress":19,"stressMax":95,"bbLatest":17,"bbMax":78,"bbMin":17},{"d":"2026-05-10","rhr":53,"stress":34,"stressMax":91,"bbLatest":9,"bbMax":60,"bbMin":9},{"d":"2026-05-11","rhr":50,"stress":22,"stressMax":96,"bbLatest":14,"bbMax":69,"bbMin":9},{"d":"2026-05-12","rhr":52,"stress":26,"stressMax":89,"bbLatest":19,"bbMax":67,"bbMin":14},{"d":"2026-05-13","rhr":48,"stress":25,"stressMax":94,"bbLatest":26,"bbMax":78,"bbMin":19},{"d":"2026-05-14","rhr":50,"stress":36,"stressMax":99,"bbLatest":5,"bbMax":76,"bbMin":5},{"d":"2026-05-15","rhr":51,"stress":31,"stressMax":99,"bbLatest":5,"bbMax":59,"bbMin":5},{"d":"2026-05-16","rhr":51,"stress":26,"stressMax":94,"bbLatest":11,"bbMax":59,"bbMin":5},{"d":"2026-05-17","rhr":49,"stress":25,"stressMax":90,"bbLatest":12,"bbMax":53,"bbMin":5},{"d":"2026-05-18","rhr":48,"stress":15,"stressMax":80,"bbLatest":19,"bbMax":79,"bbMin":12},{"d":"2026-05-19","rhr":46,"stress":17,"stressMax":93,"bbLatest":5,"bbMax":85,"bbMin":5},{"d":"2026-05-20","rhr":51,"stress":27,"stressMax":96,"bbLatest":7,"bbMax":60,"bbMin":5},{"d":"2026-05-21","rhr":48,"stress":23,"stressMax":98,"bbLatest":10,"bbMax":73,"bbMin":6},{"d":"2026-05-22","rhr":52,"stress":25,"stressMax":98,"bbLatest":23,"bbMax":60,"bbMin":9},{"d":"2026-05-23","rhr":51,"stress":24,"stressMax":85,"bbLatest":20,"bbMax":62,"bbMin":15},{"d":"2026-05-24","rhr":47,"stress":21,"stressMax":91,"bbLatest":24,"bbMax":91,"bbMin":21},{"d":"2026-05-25","rhr":53,"stress":37,"stressMax":95,"bbLatest":11,"bbMax":21,"bbMin":11},{"d":"2026-05-26","rhr":53,"stress":64,"stressMax":90,"bbLatest":5,"bbMax":50,"bbMin":5},{"d":"2026-05-27","rhr":60,"stress":40,"stressMax":99,"bbLatest":8,"bbMax":53,"bbMin":8},{"d":"2026-05-28","rhr":50,"stress":30,"stressMax":99,"bbLatest":11,"bbMax":58,"bbMin":7},{"d":"2026-05-29","rhr":54,"stress":28,"stressMax":96,"bbLatest":25,"bbMax":64,"bbMin":11},{"d":"2026-05-30","rhr":51,"stress":29,"stressMax":96,"bbLatest":10,"bbMax":66,"bbMin":10},{"d":"2026-05-31","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-06-01","rhr":52,"stress":26,"stressMax":86,"bbLatest":32,"bbMax":61,"bbMin":27},{"d":"2026-06-02","rhr":48,"stress":25,"stressMax":94,"bbLatest":5,"bbMax":84,"bbMin":5},{"d":"2026-06-03","rhr":54,"stress":31,"stressMax":94,"bbLatest":5,"bbMax":47,"bbMin":5},{"d":"2026-06-04","rhr":52,"stress":23,"stressMax":94,"bbLatest":18,"bbMax":59,"bbMin":5},{"d":"2026-06-05","rhr":50,"stress":23,"stressMax":96,"bbLatest":31,"bbMax":73,"bbMin":18},{"d":"2026-06-06","rhr":50,"stress":15,"stressMax":74,"bbLatest":47,"bbMax":76,"bbMin":31},{"d":"2026-06-07","rhr":53,"stress":24,"stressMax":90,"bbLatest":10,"bbMax":56,"bbMin":5},{"d":"2026-06-08","rhr":50,"stress":22,"stressMax":93,"bbLatest":16,"bbMax":69,"bbMin":5},{"d":"2026-06-09","rhr":50,"stress":30,"stressMax":93,"bbLatest":7,"bbMax":69,"bbMin":5},{"d":"2026-06-10","rhr":53,"stress":35,"stressMax":97,"bbLatest":24,"bbMax":59,"bbMin":7},{"d":"2026-06-11","rhr":55,"stress":40,"stressMax":97,"bbLatest":23,"bbMax":43,"bbMin":23},{"d":"2026-06-12","rhr":49,"stress":24,"stressMax":87,"bbLatest":22,"bbMax":77,"bbMin":6},{"d":"2026-06-13","rhr":50,"stress":24,"stressMax":92,"bbLatest":26,"bbMax":66,"bbMin":20},{"d":"2026-06-14","rhr":55,"stress":29,"stressMax":86,"bbLatest":16,"bbMax":48,"bbMin":16},{"d":"2026-06-15","rhr":55,"stress":30,"stressMax":93,"bbLatest":11,"bbMax":23,"bbMin":11},{"d":"2026-06-16","rhr":53,"stress":27,"stressMax":91,"bbLatest":5,"bbMax":62,"bbMin":5},{"d":"2026-06-17","rhr":49,"stress":28,"stressMax":96,"bbLatest":7,"bbMax":61,"bbMin":5},{"d":"2026-06-18","rhr":52,"stress":26,"stressMax":93,"bbLatest":34,"bbMax":65,"bbMin":7},{"d":"2026-06-19","rhr":56,"stress":28,"stressMax":83,"bbLatest":24,"bbMax":64,"bbMin":24},{"d":"2026-06-20","rhr":50,"stress":32,"stressMax":96,"bbLatest":19,"bbMax":68,"bbMin":19},{"d":"2026-06-21","rhr":54,"stress":28,"stressMax":96,"bbLatest":26,"bbMax":63,"bbMin":23},{"d":"2026-06-22","rhr":51,"stress":24,"stressMax":97,"bbLatest":23,"bbMax":79,"bbMin":21},{"d":"2026-06-23","rhr":51,"stress":23,"stressMax":98,"bbLatest":6,"bbMax":76,"bbMin":6},{"d":"2026-06-24","rhr":55,"stress":32,"stressMax":96,"bbLatest":6,"bbMax":48,"bbMin":5},{"d":"2026-06-25","rhr":49,"stress":20,"stressMax":76,"bbLatest":24,"bbMax":72,"bbMin":6},{"d":"2026-06-26","rhr":51,"stress":37,"stressMax":88,"bbLatest":17,"bbMax":64,"bbMin":11},{"d":"2026-06-27","rhr":51,"stress":16,"stressMax":69,"bbLatest":10,"bbMax":69,"bbMin":10},{"d":"2026-06-28","rhr":55,"stress":29,"stressMax":97,"bbLatest":14,"bbMax":54,"bbMin":8},{"d":"2026-06-29","rhr":53,"stress":29,"stressMax":90,"bbLatest":16,"bbMax":67,"bbMin":13},{"d":"2026-06-30","rhr":48,"stress":22,"stressMax":86,"bbLatest":5,"bbMax":66,"bbMin":5},{"d":"2026-07-01","rhr":53,"stress":28,"stressMax":94,"bbLatest":34,"bbMax":39,"bbMin":25},{"d":"2026-07-02","rhr":47,"stress":21,"stressMax":94,"bbLatest":16,"bbMax":81,"bbMin":12},{"d":"2026-07-03","rhr":46,"stress":19,"stressMax":92,"bbLatest":37,"bbMax":82,"bbMin":16},{"d":"2026-07-04","rhr":54,"stress":36,"stressMax":85,"bbLatest":30,"bbMax":51,"bbMin":30},{"d":"2026-07-05","rhr":54,"stress":42,"stressMax":96,"bbLatest":5,"bbMax":20,"bbMin":5},{"d":"2026-07-06","rhr":47,"stress":15,"stressMax":87,"bbLatest":17,"bbMax":84,"bbMin":5},{"d":"2026-07-07","rhr":54,"stress":66,"stressMax":94,"bbLatest":5,"bbMax":53,"bbMin":5},{"d":"2026-07-08","rhr":54,"stress":56,"stressMax":93,"bbLatest":16,"bbMax":46,"bbMin":16},{"d":"2026-07-09","rhr":54,"stress":25,"stressMax":93,"bbLatest":28,"bbMax":42,"bbMin":21},{"d":"2026-07-10","rhr":49,"stress":19,"stressMax":84,"bbLatest":18,"bbMax":82,"bbMin":8},{"d":"2026-07-11","rhr":46,"stress":21,"stressMax":99,"bbLatest":35,"bbMax":90,"bbMin":19},{"d":"2026-07-12","rhr":50,"stress":27,"stressMax":90,"bbLatest":15,"bbMax":62,"bbMin":13},{"d":"2026-07-13","rhr":46,"stress":23,"stressMax":93,"bbLatest":22,"bbMax":85,"bbMin":15},{"d":"2026-07-14","rhr":49,"stress":30,"stressMax":98,"bbLatest":5,"bbMax":81,"bbMin":5},{"d":"2026-07-15","rhr":51,"stress":24,"stressMax":91,"bbLatest":11,"bbMax":59,"bbMin":5},{"d":"2026-07-16","rhr":50,"stress":29,"stressMax":85,"bbLatest":28,"bbMax":36,"bbMin":19},{"d":"2026-07-17","rhr":46,"stress":26,"stressMax":91,"bbLatest":25,"bbMax":89,"bbMin":25},{"d":"2026-07-18","rhr":47,"stress":12,"stressMax":66,"bbLatest":61,"bbMax":86,"bbMin":25},{"d":"2026-07-19","rhr":52,"stress":40,"stressMax":93,"bbLatest":13,"bbMax":57,"bbMin":13},{"d":"2026-07-20","rhr":53,"stress":38,"stressMax":93,"bbLatest":28,"bbMax":61,"bbMin":20},{"d":"2026-07-21","rhr":50,"stress":23,"stressMax":90,"bbLatest":5,"bbMax":71,"bbMin":5},{"d":"2026-07-22","rhr":53,"stress":27,"stressMax":93,"bbLatest":12,"bbMax":55,"bbMin":5},{"d":"2026-07-23","rhr":54,"stress":35,"stressMax":89,"bbLatest":6,"bbMax":47,"bbMin":6},{"d":"2026-07-24","rhr":50,"stress":27,"stressMax":89,"bbLatest":23,"bbMax":72,"bbMin":6},{"d":"2026-07-25","rhr":53,"stress":29,"stressMax":96,"bbLatest":10,"bbMax":70,"bbMin":10},{"d":"2026-07-26","rhr":48,"stress":25,"stressMax":99,"bbLatest":5,"bbMax":72,"bbMin":5},{"d":"2026-07-27","rhr":51,"stress":23,"stressMax":93,"bbLatest":12,"bbMax":62,"bbMin":5},{"d":"2026-07-28","rhr":56,"stress":50,"stressMax":88,"bbLatest":5,"bbMax":50,"bbMin":5},{"d":"2026-07-29","rhr":49,"stress":26,"stressMax":97,"bbLatest":8,"bbMax":64,"bbMin":5},{"d":"2026-07-30","rhr":51,"stress":27,"stressMax":88,"bbLatest":12,"bbMax":60,"bbMin":8},{"d":"2026-07-31","rhr":52,"stress":26,"stressMax":94,"bbLatest":5,"bbMax":54,"bbMin":5},{"d":"2026-08-01","rhr":52,"stress":27,"stressMax":92,"bbLatest":6,"bbMax":63,"bbMin":5},{"d":"2026-08-02","rhr":55,"stress":30,"stressMax":84,"bbLatest":9,"bbMax":37,"bbMin":9},{"d":"2026-08-03","rhr":50,"stress":26,"stressMax":92,"bbLatest":9,"bbMax":61,"bbMin":5},{"d":"2026-08-04","rhr":50,"stress":21,"stressMax":96,"bbLatest":5,"bbMax":65,"bbMin":5},{"d":"2026-08-05","rhr":52,"stress":24,"stressMax":90,"bbLatest":8,"bbMax":63,"bbMin":5},{"d":"2026-08-06","rhr":48,"stress":28,"stressMax":90,"bbLatest":23,"bbMax":77,"bbMin":8},{"d":"2026-08-07","rhr":55,"stress":34,"stressMax":88,"bbLatest":13,"bbMax":61,"bbMin":13},{"d":"2026-08-08","rhr":52,"stress":27,"stressMax":90,"bbLatest":19,"bbMax":62,"bbMin":13},{"d":"2026-08-09","rhr":55,"stress":46,"stressMax":93,"bbLatest":5,"bbMax":16,"bbMin":5},{"d":"2026-08-10","rhr":52,"stress":22,"stressMax":97,"bbLatest":16,"bbMax":69,"bbMin":5},{"d":"2026-08-11","rhr":49,"stress":26,"stressMax":95,"bbLatest":5,"bbMax":73,"bbMin":5},{"d":"2026-08-12","rhr":50,"stress":20,"stressMax":96,"bbLatest":19,"bbMax":73,"bbMin":5},{"d":"2026-08-13","rhr":54,"stress":25,"stressMax":93,"bbLatest":13,"bbMax":76,"bbMin":11},{"d":"2026-08-14","rhr":50,"stress":20,"stressMax":75,"bbLatest":12,"bbMax":68,"bbMin":12},{"d":"2026-08-15","rhr":50,"stress":19,"stressMax":90,"bbLatest":43,"bbMax":69,"bbMin":12},{"d":"2026-08-16","rhr":52,"stress":42,"stressMax":89,"bbLatest":5,"bbMax":43,"bbMin":5},{"d":"2026-08-17","rhr":50,"stress":15,"stressMax":96,"bbLatest":50,"bbMax":73,"bbMin":5},{"d":"2026-08-18","rhr":55,"stress":59,"stressMax":93,"bbLatest":5,"bbMax":50,"bbMin":5},{"d":"2026-08-19","rhr":50,"stress":19,"stressMax":85,"bbLatest":7,"bbMax":72,"bbMin":5},{"d":"2026-08-20","rhr":46,"stress":21,"stressMax":94,"bbLatest":13,"bbMax":75,"bbMin":7},{"d":"2026-08-21","rhr":54,"stress":29,"stressMax":99,"bbLatest":24,"bbMax":70,"bbMin":13},{"d":"2026-08-22","rhr":47,"stress":20,"stressMax":93,"bbLatest":6,"bbMax":66,"bbMin":5},{"d":"2026-08-23","rhr":47,"stress":11,"stressMax":53,"bbLatest":5,"bbMax":70,"bbMin":5},{"d":"2026-08-24","rhr":48,"stress":24,"stressMax":90,"bbLatest":14,"bbMax":81,"bbMin":5},{"d":"2026-08-25","rhr":47,"stress":23,"stressMax":91,"bbLatest":6,"bbMax":76,"bbMin":6},{"d":"2026-08-26","rhr":47,"stress":21,"stressMax":87,"bbLatest":22,"bbMax":66,"bbMin":5},{"d":"2026-08-27","rhr":49,"stress":14,"stressMax":74,"bbLatest":8,"bbMax":66,"bbMin":8},{"d":"2026-08-28","rhr":52,"stress":32,"stressMax":95,"bbLatest":13,"bbMax":54,"bbMin":11},{"d":"2026-08-29","rhr":48,"stress":20,"stressMax":90,"bbLatest":19,"bbMax":70,"bbMin":9},{"d":"2026-08-30","rhr":50,"stress":23,"stressMax":93,"bbLatest":23,"bbMax":62,"bbMin":18},{"d":"2026-08-31","rhr":50,"stress":20,"stressMax":85,"bbLatest":11,"bbMax":69,"bbMin":10},{"d":"2026-09-01","rhr":53,"stress":65,"stressMax":94,"bbLatest":5,"bbMax":19,"bbMin":5},{"d":"2026-09-02","rhr":52,"stress":20,"stressMax":87,"bbLatest":11,"bbMax":60,"bbMin":5},{"d":"2026-09-03","rhr":50,"stress":29,"stressMax":88,"bbLatest":7,"bbMax":64,"bbMin":7},{"d":"2026-09-04","rhr":52,"stress":22,"stressMax":86,"bbLatest":10,"bbMax":71,"bbMin":7},{"d":"2026-09-05","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-09-06","rhr":51,"stress":33,"stressMax":96,"bbLatest":25,"bbMax":65,"bbMin":17},{"d":"2026-09-07","rhr":46,"stress":13,"stressMax":97,"bbLatest":61,"bbMax":89,"bbMin":26},{"d":"2026-09-08","rhr":54,"stress":68,"stressMax":95,"bbLatest":8,"bbMax":20,"bbMin":8},{"d":"2026-09-09","rhr":53,"stress":25,"stressMax":87,"bbLatest":28,"bbMax":40,"bbMin":5},{"d":"2026-09-10","rhr":48,"stress":19,"stressMax":96,"bbLatest":9,"bbMax":80,"bbMin":6},{"d":"2026-09-11","rhr":50,"stress":33,"stressMax":96,"bbLatest":5,"bbMax":52,"bbMin":5},{"d":"2026-09-12","rhr":48,"stress":28,"stressMax":96,"bbLatest":27,"bbMax":66,"bbMin":5},{"d":"2026-09-13","rhr":52,"stress":28,"stressMax":91,"bbLatest":23,"bbMax":64,"bbMin":5},{"d":"2026-09-14","rhr":49,"stress":23,"stressMax":97,"bbLatest":26,"bbMax":66,"bbMin":11},{"d":"2026-09-15","rhr":45,"stress":10,"stressMax":93,"bbLatest":25,"bbMax":86,"bbMin":25},{"d":"2026-09-16","rhr":53,"stress":32,"stressMax":90,"bbLatest":20,"bbMax":64,"bbMin":20},{"d":"2026-09-17","rhr":53,"stress":35,"stressMax":92,"bbLatest":7,"bbMax":47,"bbMin":7},{"d":"2026-09-18","rhr":49,"stress":19,"stressMax":94,"bbLatest":7,"bbMax":68,"bbMin":7},{"d":"2026-09-19","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-09-20","rhr":52,"stress":41,"stressMax":94,"bbLatest":27,"bbMax":65,"bbMin":20},{"d":"2026-09-21","rhr":54,"stress":38,"stressMax":89,"bbLatest":30,"bbMax":65,"bbMin":30},{"d":"2026-09-22","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-09-23","rhr":56,"stress":33,"stressMax":98,"bbLatest":20,"bbMax":63,"bbMin":20},{"d":"2026-09-24","rhr":46,"stress":16,"stressMax":85,"bbLatest":11,"bbMax":89,"bbMin":11},{"d":"2026-09-25","rhr":55,"stress":36,"stressMax":95,"bbLatest":17,"bbMax":63,"bbMin":13},{"d":"2026-09-26","rhr":49,"stress":29,"stressMax":92,"bbLatest":6,"bbMax":81,"bbMin":6},{"d":"2026-09-27","rhr":51,"stress":23,"stressMax":93,"bbLatest":26,"bbMax":61,"bbMin":6},{"d":"2026-09-28","rhr":55,"stress":41,"stressMax":94,"bbLatest":12,"bbMax":19,"bbMin":12},{"d":"2026-09-29","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-09-30","rhr":55,"stress":42,"stressMax":94,"bbLatest":28,"bbMax":40,"bbMin":28},{"d":"2026-10-01","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-02","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-03","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-04","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-05","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-06","rhr":71,"stress":54,"stressMax":88,"bbLatest":5,"bbMax":35,"bbMin":5},{"d":"2026-10-07","rhr":75,"stress":61,"stressMax":87,"bbLatest":24,"bbMax":41,"bbMin":24},{"d":"2026-10-08","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-09","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-10","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-11","rhr":87,"stress":83,"stressMax":99,"bbLatest":5,"bbMax":41,"bbMin":5},{"d":"2026-10-12","rhr":69,"stress":47,"stressMax":90,"bbLatest":18,"bbMax":43,"bbMin":5},{"d":"2026-10-13","rhr":64,"stress":33,"stressMax":84,"bbLatest":18,"bbMax":55,"bbMin":18},{"d":"2026-10-14","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-15","rhr":60,"stress":44,"stressMax":99,"bbLatest":13,"bbMax":57,"bbMin":13},{"d":"2026-10-16","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-17","rhr":71,"stress":67,"stressMax":96,"bbLatest":5,"bbMax":59,"bbMin":5},{"d":"2026-10-18","rhr":70,"stress":60,"stressMax":98,"bbLatest":29,"bbMax":39,"bbMin":5},{"d":"2026-10-19","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-20","rhr":67,"stress":37,"stressMax":84,"bbLatest":23,"bbMax":42,"bbMin":23},{"d":"2026-10-21","rhr":52,"stress":27,"stressMax":93,"bbLatest":6,"bbMax":78,"bbMin":6},{"d":"2026-10-22","rhr":57,"stress":18,"stressMax":48,"bbLatest":37,"bbMax":57,"bbMin":5},{"d":"2026-10-23","rhr":61,"stress":44,"stressMax":94,"bbLatest":29,"bbMax":60,"bbMin":29},{"d":"2026-10-24","rhr":null,"stress":-1,"stressMax":null,"bbLatest":null,"bbMax":null,"bbMin":null},{"d":"2026-10-25","rhr":71,"stress":59,"stressMax":96,"bbLatest":25,"bbMax":60,"bbMin":25},{"d":"2026-10-26","rhr":66,"stress":39,"stressMax":95,"bbLatest":17,"bbMax":47,"bbMin":17},{"d":"2026-10-27","rhr":65,"stress":48,"stressMax":96,"bbLatest":5,"bbMax":21,"bbMin":5},{"d":"2026-10-28","rhr":54,"stress":15,"stressMax":63,"bbLatest":14,"bbMax":72,"bbMin":5},{"d":"2026-10-29","rhr":50,"stress":21,"stressMax":95,"bbLatest":25,"bbMax":83,"bbMin":5},{"d":"2026-10-30","rhr":49,"stress":26,"stressMax":95,"bbLatest":18,"bbMax":88,"bbMin":18},{"d":"2026-10-31","rhr":51,"stress":27,"stressMax":99,"bbLatest":32,"bbMax":84,"bbMin":18},{"d":"2026-11-01","rhr":52,"stress":15,"stressMax":55,"bbLatest":21,"bbMax":69,"bbMin":13},{"d":"2026-11-02","rhr":50,"stress":28,"stressMax":93,"bbLatest":17,"bbMax":83,"bbMin":14},{"d":"2026-11-03","rhr":55,"stress":61,"stressMax":94,"bbLatest":5,"bbMax":21,"bbMin":5},{"d":"2026-11-04","rhr":54,"stress":26,"stressMax":98,"bbLatest":23,"bbMax":55,"bbMin":5},{"d":"2026-11-05","rhr":51,"stress":12,"stressMax":93,"bbLatest":71,"bbMax":71,"bbMin":5},{"d":"2026-11-06","rhr":56,"stress":29,"stressMax":92,"bbLatest":45,"bbMax":63,"bbMin":45},{"d":"2026-11-07","rhr":56,"stress":62,"stressMax":99,"bbLatest":32,"bbMax":75,"bbMin":32},{"d":"2026-11-08","rhr":57,"stress":55,"stressMax":90,"bbLatest":36,"bbMax":66,"bbMin":36}],"sleep":[{"d":"2026-04-17","secs":16740,"hrs":4.65,"score":58},{"d":"2026-04-18","secs":21117,"hrs":5.87,"score":73},{"d":"2026-04-19","secs":19474,"hrs":5.41,"score":69},{"d":"2026-04-20","secs":19620,"hrs":5.45,"score":70},{"d":"2026-04-21","secs":17340,"hrs":4.82,"score":57},{"d":"2026-04-22","secs":17460,"hrs":4.85,"score":57},{"d":"2026-04-23","secs":21900,"hrs":6.08,"score":77},{"d":"2026-04-24","secs":18480,"hrs":5.13,"score":67},{"d":"2026-04-25","secs":19980,"hrs":5.55,"score":51},{"d":"2026-04-26","secs":16800,"hrs":4.67,"score":61},{"d":"2026-04-27","secs":16200,"hrs":4.5,"score":58},{"d":"2026-04-29","secs":20580,"hrs":5.72,"score":71},{"d":"2026-04-30","secs":17940,"hrs":4.98,"score":60},{"d":"2026-05-01","secs":20557,"hrs":5.71,"score":74},{"d":"2026-05-02","secs":23790,"hrs":6.61,"score":80},{"d":"2026-05-04","secs":21180,"hrs":5.88,"score":72},{"d":"2026-05-06","secs":22840,"hrs":6.34,"score":78},{"d":"2026-05-07","secs":17750,"hrs":4.93,"score":65},{"d":"2026-05-08","secs":17400,"hrs":4.83,"score":63},{"d":"2026-05-09","secs":16380,"hrs":4.55,"score":50},{"d":"2026-05-11","secs":18420,"hrs":5.12,"score":67},{"d":"2026-05-12","secs":18900,"hrs":5.25,"score":65},{"d":"2026-05-13","secs":19440,"hrs":5.4,"score":69},{"d":"2026-05-14","secs":19740,"hrs":5.48,"score":68},{"d":"2026-05-15","secs":18060,"hrs":5.02,"score":63},{"d":"2026-05-16","secs":16140,"hrs":4.48,"score":48},{"d":"2026-05-17","secs":17340,"hrs":4.82,"score":62},{"d":"2026-05-18","secs":19730,"hrs":5.48,"score":72},{"d":"2026-05-19","secs":18883,"hrs":5.25,"score":69},{"d":"2026-05-20","secs":20100,"hrs":5.58,"score":71},{"d":"2026-05-21","secs":20691,"hrs":5.75,"score":72},{"d":"2026-05-22","secs":16260,"hrs":4.52,"score":56},{"d":"2026-05-23","secs":11924,"hrs":3.31,"score":38},{"d":"2026-05-24","secs":25320,"hrs":7.03,"score":82},{"d":"2026-05-28","secs":14400,"hrs":4.0,"score":45},{"d":"2026-05-29","secs":20220,"hrs":5.62,"score":68},{"d":"2026-05-30","secs":14802,"hrs":4.11,"score":53},{"d":"2026-06-02","secs":21047,"hrs":5.85,"score":71},{"d":"2026-06-03","secs":16463,"hrs":4.57,"score":56},{"d":"2026-06-04","secs":21625,"hrs":6.01,"score":74},{"d":"2026-06-05","secs":20090,"hrs":5.58,"score":70},{"d":"2026-06-06","secs":17550,"hrs":4.88,"score":55},{"d":"2026-06-07","secs":18240,"hrs":5.07,"score":64},{"d":"2026-06-08","secs":20729,"hrs":5.76,"score":73},{"d":"2026-06-09","secs":18653,"hrs":5.18,"score":67},{"d":"2026-06-10","secs":21600,"hrs":6.0,"score":61},{"d":"2026-06-12","secs":20700,"hrs":5.75,"score":72},{"d":"2026-06-13","secs":14940,"hrs":4.15,"score":55},{"d":"2026-06-16","secs":20040,"hrs":5.57,"score":54},{"d":"2026-06-17","secs":17820,"hrs":4.95,"score":65},{"d":"2026-06-18","secs":20548,"hrs":5.71,"score":54},{"d":"2026-06-20","secs":12300,"hrs":3.42,"score":46},{"d":"2026-06-22","secs":20965,"hrs":5.82,"score":74},{"d":"2026-06-23","secs":21234,"hrs":5.9,"score":78},{"d":"2026-06-24","secs":16380,"hrs":4.55,"score":55},{"d":"2026-06-25","secs":17520,"hrs":4.87,"score":64},{"d":"2026-06-27","secs":17040,"hrs":4.73,"score":59},{"d":"2026-06-29","secs":18979,"hrs":5.27,"score":62},{"d":"2026-06-30","secs":13980,"hrs":3.88,"score":50},{"d":"2026-07-02","secs":14520,"hrs":4.03,"score":54},{"d":"2026-07-03","secs":17400,"hrs":4.83,"score":72},{"d":"2026-07-06","secs":20737,"hrs":5.76,"score":72},{"d":"2026-07-10","secs":17400,"hrs":4.83,"score":58},{"d":"2026-07-11","secs":23599,"hrs":6.56,"score":77},{"d":"2026-07-12","secs":11880,"hrs":3.3,"score":45},{"d":"2026-07-13","secs":19080,"hrs":5.3,"score":69},{"d":"2026-07-14","secs":20880,"hrs":5.8,"score":71},{"d":"2026-07-15","secs":18720,"hrs":5.2,"score":63},{"d":"2026-07-17","secs":22680,"hrs":6.3,"score":76},{"d":"2026-07-18","secs":20100,"hrs":5.58,"score":76},{"d":"2026-07-21","secs":20816,"hrs":5.78,"score":72},{"d":"2026-07-22","secs":17544,"hrs":4.87,"score":58},{"d":"2026-07-24","secs":20940,"hrs":5.82,"score":74},{"d":"2026-07-25","secs":19680,"hrs":5.47,"score":57},{"d":"2026-07-26","secs":17700,"hrs":4.92,"score":63},{"d":"2026-07-27","secs":20160,"hrs":5.6,"score":69},{"d":"2026-07-29","secs":17280,"hrs":4.8,"score":60},{"d":"2026-07-30","secs":18155,"hrs":5.04,"score":59},{"d":"2026-07-31","secs":13500,"hrs":3.75,"score":41},{"d":"2026-08-01","secs":19860,"hrs":5.52,"score":69},{"d":"2026-08-03","secs":18840,"hrs":5.23,"score":65},{"d":"2026-08-04","secs":17100,"hrs":4.75,"score":61},{"d":"2026-08-05","secs":18780,"hrs":5.22,"score":65},{"d":"2026-08-06","secs":20700,"hrs":5.75,"score":73},{"d":"2026-08-08","secs":14130,"hrs":3.92,"score":48},{"d":"2026-08-10","secs":24372,"hrs":6.77,"score":77},{"d":"2026-08-11","secs":15300,"hrs":4.25,"score":56},{"d":"2026-08-12","secs":19051,"hrs":5.29,"score":67},{"d":"2026-08-13","secs":17700,"hrs":4.92,"score":64},{"d":"2026-08-14","secs":16098,"hrs":4.47,"score":57},{"d":"2026-08-15","secs":15960,"hrs":4.43,"score":58},{"d":"2026-08-17","secs":20395,"hrs":5.67,"score":72},{"d":"2026-08-19","secs":18000,"hrs":5.0,"score":64},{"d":"2026-08-20","secs":12780,"hrs":3.55,"score":41},{"d":"2026-08-21","secs":21480,"hrs":5.97,"score":73},{"d":"2026-08-22","secs":14963,"hrs":4.16,"score":52},{"d":"2026-08-23","secs":16560,"hrs":4.6,"score":60},{"d":"2026-08-24","secs":22500,"hrs":6.25,"score":75},{"d":"2026-08-25","secs":18540,"hrs":5.15,"score":67},{"d":"2026-08-26","secs":17509,"hrs":4.86,"score":60},{"d":"2026-08-27","secs":12420,"hrs":3.45,"score":47},{"d":"2026-08-29","secs":15660,"hrs":4.35,"score":57},{"d":"2026-08-30","secs":12977,"hrs":3.6,"score":47},{"d":"2026-08-31","secs":17382,"hrs":4.83,"score":62},{"d":"2026-09-02","secs":19320,"hrs":5.37,"score":68},{"d":"2026-09-03","secs":15120,"hrs":4.2,"score":55},{"d":"2026-09-04","secs":18660,"hrs":5.18,"score":67},{"d":"2026-09-07","secs":20700,"hrs":5.75,"score":73},{"d":"2026-09-10","secs":15780,"hrs":4.38,"score":58},{"d":"2026-09-12","secs":20158,"hrs":5.6,"score":71},{"d":"2026-09-13","secs":20100,"hrs":5.58,"score":71},{"d":"2026-09-14","secs":14340,"hrs":3.98,"score":51},{"d":"2026-09-15","secs":19278,"hrs":5.36,"score":69},{"d":"2026-09-18","secs":16500,"hrs":4.58,"score":62},{"d":"2026-09-24","secs":19560,"hrs":5.43,"score":70},{"d":"2026-09-26","secs":19380,"hrs":5.38,"score":67},{"d":"2026-09-27","secs":18600,"hrs":5.17,"score":60},{"d":"2026-10-21","secs":18060,"hrs":5.02,"score":63},{"d":"2026-10-22","secs":17340,"hrs":4.82,"score":61},{"d":"2026-10-28","secs":19380,"hrs":5.38,"score":69},{"d":"2026-10-29","secs":19620,"hrs":5.45,"score":70},{"d":"2026-10-30","secs":19577,"hrs":5.44,"score":71},{"d":"2026-10-31","secs":21060,"hrs":5.85,"score":74},{"d":"2026-11-01","secs":9900,"hrs":2.75,"score":34},{"d":"2026-11-02","secs":17700,"hrs":4.92,"score":57},{"d":"2026-11-04","secs":18129,"hrs":5.04,"score":63},{"d":"2026-11-05","secs":19020,"hrs":5.28,"score":69}],"sleepNeedMin":480,"hrv":[{"d":"2026-11-07","weekly":51,"last":null,"status":"LOW","balLow":53,"balHigh":62}],"hr":{"rhr":57,"avg7":54,"min":63,"max":177},"fitnessAge":null};
+if (!D) {
+  document.body.innerHTML = '<div style="font:16px/1.6 ui-monospace,monospace;padding:40px;max-width:640px;margin:0 auto;color:#ddd;background:#111;min-height:100vh"><b>This is the build template and has no data in it.</b><br>Open <b>brain.html</b> instead, or run <code>python build_brain.py</code> to regenerate it.</div>';
+  throw new Error('No data embedded: open brain.html, not brain.template.html');
+}
+
+const $ = id => document.getElementById(id);
+const DAY = 86400000, TAU = Math.PI*2;
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const toMs = k => Date.parse(k + 'T00:00:00Z');
+const keyOf = ms => new Date(ms).toISOString().slice(0,10);
+const addDays = (k,n) => keyOf(toMs(k) + n*DAY);
+const fmtD = k => `${+k.slice(8,10)} ${MON[+k.slice(5,7)-1]}`;
+const fmtDY = k => `${fmtD(k)} ${k.slice(0,4)}`;
+const sum = a => a.reduce((s,v)=>s+v,0);
+const avg = a => { const n=a.filter(v=>v!=null); return n.length ? sum(n)/n.length : null; };
+const fx = (v,d=0) => v==null ? '—' : v.toFixed(d).replace('-','−');
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TODAY = D.today;
+const LVL = {g:'#3dff9a', a:'#ffcc4d', r:'#ff4d6d', n:'#8a93a6'};
+
+/* =========================================================
+   DATA
+   ========================================================= */
+const SPORT = {
+  run:   {label:'RUN',   color:'#3dff9a'},
+  bike:  {label:'BIKE',  color:'#4aa3ff'},
+  lift:  {label:'LIFT',  color:'#ffcc4d'},
+  swim:  {label:'SWIM',  color:'#22e5ff'},
+  other: {label:'OTHER', color:'#8a93a6'},
+};
+const sportOf = t => /swim/.test(t||'') ? 'swim' : /run/.test(t||'') ? 'run' : /cycl|bik/.test(t||'') ? 'bike' : /strength|weight|lift/.test(t||'') ? 'lift' : 'other';
+const weekOf = k => { const dow = new Date(toMs(k)).getUTCDay(); return addDays(k, -((dow+6)%7)); };
+
+const ACT = D.activities.map(a => ({...a, sport:sportOf(a.type), km:a.dist/1000, hrs:a.dur/3600})).sort((x,y)=>x.start<y.start?-1:1);
+const daily = {}; D.daily.forEach(r => daily[r.d] = r);
+const t0 = daily[TODAY] || {};
+
+/* weeks: first workout's week .. this week */
+const firstMonday = ACT.length ? weekOf(ACT[0].date) : weekOf(TODAY), thisMonday = weekOf(TODAY);
+const WEEKS = [];
+for (let k = firstMonday; k <= thisMonday; k = addDays(k,7)) WEEKS.push({key:k, idx:WEEKS.length, acts:[], km:0, hrs:0});
+const weekIdx = {}; WEEKS.forEach(w => weekIdx[w.key] = w);
+ACT.forEach(a => { const w = weekIdx[weekOf(a.date)]; if (w){ a.week = w; w.acts.push(a); w.hrs += a.hrs; if (a.sport==='run') w.km += a.km; } });
+const SPORT_COUNT = {run:0,bike:0,lift:0,swim:0,other:0}; ACT.forEach(a=>SPORT_COUNT[a.sport]++);
+const LONGEST = ACT.filter(a=>a.sport==='run').reduce((m,a)=>!m||a.dist>m.dist?a:m, null);
+
+/* =========================================================
+   VITALS (everything the rails say comes from here)
+   ========================================================= */
+const loadBy = {}; ACT.forEach(a => loadBy[a.date] = (loadBy[a.date]||0) + (a.load||0));
+const l42 = Array.from({length:42}, (_,i)=>loadBy[addDays(TODAY, i-41)]||0);
+const FIT = sum(l42)/42, FAT = sum(l42.slice(-7))/7, FORM = FIT - FAT, ACWR = FIT>0 ? FAT/FIT : null;
+
+const hrvAll = D.hrv.slice().sort((a,b)=>a.d<b.d?-1:1);
+const HRV = hrvAll.filter(h=>h.last!=null).pop() || hrvAll[hrvAll.length-1] || null;
+const SLEEPS = D.sleep.slice().sort((a,b)=>a.d<b.d?-1:1);
+const SL = SLEEPS[SLEEPS.length-1] || null;
+const SL_GAP = SL ? Math.round((toMs(TODAY)-toMs(SL.d))/DAY) : null;
+const NEED_H = (D.sleepNeedMin||480)/60;
+const BB = t0.bbLatest;
+const KM_WEEK = WEEKS.length ? WEEKS[WEEKS.length-1].km : 0;
+const KM_PRIOR = WEEKS.length>1 ? avg(WEEKS.slice(Math.max(0,WEEKS.length-5), WEEKS.length-1).map(w=>w.km)) : null;
+const KM_RATIO = KM_PRIOR>0 ? KM_WEEK/KM_PRIOR : null;
+
+function vitals(){
+  const v = [];
+  v.push({key:'bb', label:'BODY BATTERY', val: BB!=null?`${BB}/100`:'—', x: t0.bbMax!=null?`today high ${t0.bbMax} · low ${t0.bbMin}`:'no reading',
+    lvl: BB==null?'n':BB>=60?'g':BB>=30?'a':'r'});
+  if (HRV){
+    const val = HRV.last!=null?HRV.last:HRV.weekly, st=(HRV.status||'').toUpperCase();
+    let lvl = st==='BALANCED'?'g': st==='UNBALANCED'?'a': (st==='LOW'||st==='POOR')?'r': HRV.balLow==null?'n': val>=HRV.balLow&&val<=HRV.balHigh?'g':'a';
+    v.push({key:'hrv', label:'HRV VS BASELINE', val:`${val} ms`, x:`${HRV.last!=null?'overnight':'7-day avg'} · ${st||'—'} · baseline ${HRV.balLow}–${HRV.balHigh}`, lvl, num:val, lo:HRV.balLow, hi:HRV.balHigh, st});
+  } else v.push({key:'hrv', label:'HRV VS BASELINE', val:'—', x:'no HRV data', lvl:'n'});
+  if (SL){
+    const h = SL.secs/3600, hh=Math.floor(h), mm=Math.round((SL.secs/60)%60);
+    const lvl = (h<6 || (SL.score!=null&&SL.score<60)) ? 'r' : (h<7 || (SL.score!=null&&SL.score<70) || SL_GAP>=2) ? 'a' : 'g';
+    v.push({key:'sleep', label:'SLEEP', val:`${hh}h ${String(mm).padStart(2,'0')}m`, x:`score ${SL.score!=null?SL.score:'—'} · ${fmtD(SL.d)}${SL_GAP>0?` · ${SL_GAP} night${SL_GAP>1?'s':''} unlogged`:''}`, lvl, hh, mm});
+  } else v.push({key:'sleep', label:'SLEEP', val:'—', x:'no sleep data', lvl:'n'});
+  v.push({key:'form', label:'TRAINING FORM', val:fx(FORM,0), x:`fitness ${fx(FIT,0)} − fatigue ${fx(FAT,0)} · 7d load ${fx(ACWR,1)}× base`,
+    lvl: ACWR==null?'n': ACWR>1.5?'r': ACWR>1.3?'a':'g'});
+  v.push({key:'km', label:'KM THIS WEEK', val:`${KM_WEEK.toFixed(1)} km`, x: KM_PRIOR!=null?`prior 4-wk avg ${KM_PRIOR.toFixed(1)} km`:'no prior weeks',
+    lvl: KM_RATIO==null?'n': (KM_RATIO>=0.7&&KM_RATIO<=1.3)?'g': ((KM_RATIO>1.3&&KM_RATIO<=1.6)||(KM_RATIO>=0.4&&KM_RATIO<0.7))?'a':'r'});
+  return v;
+}
+const V = vitals(), VK = Object.fromEntries(V.map(x=>[x.key,x]));
+
+/* ---- race ---- */
+let RACE = D.race && D.race.date ? D.race : null;
+try { if (!RACE) RACE = JSON.parse(localStorage.getItem('brain.race')||'null'); } catch(e){}
+const raceStartMs = () => RACE && RACE.date ? Date.parse(`${RACE.date}T${RACE.time||'06:00'}:00+08:00`) : null;
+const nowKey = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Singapore'}).format(new Date());
+const raceDays = () => RACE && RACE.date ? Math.round((toMs(RACE.date) - toMs(nowKey()))/DAY) : null;
+function setRace(){
+  const name = prompt('Goal race name', RACE && RACE.name || ''); if (name===null) return;
+  const date = prompt('Race date (YYYY-MM-DD)', RACE && RACE.date || ''); if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const time = prompt('Start time, Singapore time (HH:MM)', RACE && RACE.time || '06:00') || '06:00';
+  try { localStorage.setItem('brain.race', JSON.stringify({name, date, time: /^\d{1,2}:\d{2}$/.test(time)?time:'06:00'})); } catch(e){}
+  location.reload();
+}
+
+/* ---- directives: the three that matter most today ---- */
+function directives(){
+  const c = [];
+  if (ACWR!=null && ACWR>1.3) c.push({sev:.5+Math.min(.4,(ACWR-1.3)*.5), t:`<b>Hold the intensity.</b> Your last 7 days of load are ${fx(ACWR,1)}× your 6-week base (form ${fx(FORM,0)}), so keep today to Zone 1–2 or rest.`});
+  if (VK.hrv.lo!=null && VK.hrv.num<VK.hrv.lo) c.push({sev:.55+Math.min(.3,(VK.hrv.lo-VK.hrv.num)/VK.hrv.lo*3), t:`<b>Protect recovery.</b> HRV is ${VK.hrv.num} ms, under your ${VK.hrv.lo}–${VK.hrv.hi} ms baseline, so skip hard efforts until it climbs back.`});
+  if (SL && (SL_GAP>=2 || SL.secs/3600 < NEED_H-1.5)) c.push({sev:.3+Math.min(.35,SL_GAP*.05+Math.max(0,NEED_H-1.5-SL.secs/3600)*.08),
+    t: SL_GAP>=2 ? `<b>Close the sleep gap.</b> Nothing is logged for ${SL_GAP} nights and the last one was ${VK.sleep.hh}h ${String(VK.sleep.mm).padStart(2,'0')}m, so wear the watch to bed tonight.`
+                 : `<b>Bank sleep.</b> Your last night was ${VK.sleep.hh}h ${String(VK.sleep.mm).padStart(2,'0')}m against ${NEED_H.toFixed(0)}h needed, so aim for an early night.`});
+  if (BB!=null && BB<40) c.push({sev:BB<25?.55:.33, t:`<b>Spend energy carefully.</b> Body Battery is down to ${BB}, so keep the rest of today light.`});
+  if (KM_RATIO!=null && KM_RATIO>1.3) c.push({sev:.35+Math.min(.3,(KM_RATIO-1.3)*.3), t:`<b>Cap the week.</b> ${KM_WEEK.toFixed(1)} km is already ${fx(KM_RATIO,1)}× your 4-week average, so don't add more running before it resets.`});
+  if (!RACE) c.push({sev:.25, t:`<b>Set your goal race.</b> The North Star and the countdown stay empty until you give them a date.`});
+  c.push({sev:.05, t:`<b>Green light.</b> Nothing is outside range, so train as planned.`});
+  c.sort((a,b)=>b.sev-a.sev);
+  return c.slice(0,3);
+}
+const DIRS = directives();
+
+/* =========================================================
+   LEFT / TOP / BOTTOM UI
+   ========================================================= */
+(function(){
+  $('vitals').innerHTML = V.map(x=>`<div class="vit" style="--c:${LVL[x.lvl]}"><span class="d"></span><span class="k">${x.label}</span><span class="v">${esc(x.val)}</span><span class="x">${esc(x.x)}</span></div>`).join('');
+  $('dirs').innerHTML = DIRS.map((d,i)=>`<div class="dir"><i>${i+1}</i><div>${d.t}</div></div>`).join('');
+  $('legend').innerHTML = Object.keys(SPORT).map(k=>`<button class="lg" type="button" data-k="${k}" aria-pressed="true" style="--c:${SPORT[k].color}"><i></i><b>${SPORT[k].label}</b><span>${SPORT_COUNT[k]}</span></button>`).join('');
+  $('deck').innerHTML = [['recovery','◉','RECOVERY CHECK'],['plan','▸','PLAN TODAY'],['watch','⌁','SEND TO WATCH'],['race','⚑','RACE WEEK'],['recap','≡','WEEKLY RECAP'],['coach','✦','ASK MY COACH']]
+    .map(([k,g,l])=>`<button class="sk" type="button" data-sk="${k}"><b>${g}</b>${l}</button>`).join('');
+})();
+
+function renderRace(){
+  const d = raceDays(), ms = raceStartMs();
+  if (!RACE){
+    $('ns-days').textContent = '--';
+    $('ns-sub').innerHTML = `GOAL RACE NOT SET · <button class="lnk" id="setr" type="button">set race</button>`;
+    $('cd').innerHTML = '<small>START LINE NOT SET</small>';
+    $('cd-sub').innerHTML = '<button class="lnk" id="setr2" type="button">set your goal race</button>';
+  } else {
+    const nm = esc((RACE.name||'GOAL RACE').toUpperCase());
+    $('ns-days').textContent = d>=0 ? d : '0';
+    $('ns-sub').innerHTML = `${d>=0?'DAYS TO':'DAYS SINCE'} ${nm} · <button class="lnk" id="setr" type="button">edit</button>`;
+    const diff = ms - Date.now();
+    if (diff>0){
+      const s = Math.floor(diff/1000), dd=Math.floor(s/86400), hh=Math.floor(s%86400/3600), mm=Math.floor(s%3600/60), ss=s%60;
+      $('cd').innerHTML = `${dd}<small>d</small>${String(hh).padStart(2,'0')}<small>h</small>${String(mm).padStart(2,'0')}<small>m</small>${String(ss).padStart(2,'0')}<small>s</small>`;
+    } else $('cd').innerHTML = `<small>${diff>-864e5?'RACE DAY':'RACE COMPLETE'}</small>`;
+    $('cd-sub').innerHTML = `${nm} · ${fmtDY(RACE.date)} · ${RACE.time||'06:00'} SGT <button class="lnk" id="setr2" type="button">edit</button>`;
+  }
+  ['setr','setr2'].forEach(i=>{ const b=$(i); if (b) b.onclick=setRace; });
+}
+function renderTop(){
+  const dt = new Date(D.fetched), age = Date.now()-dt.getTime();
+  const online = age < 36*3600e3;
+  const nodes = ACT.length + WEEKS.length;
+  const agoTxt = age<3600e3 ? `${Math.round(age/60e3)}m ago` : age<2*864e5 ? `${Math.round(age/3600e3)}h ago` : `${Math.round(age/864e5)}d ago`;
+  $('status').innerHTML = `<span>CORE <b>IDLE</b></span><span class="${online?'':'off'}">GARMIN <b>${online?'ONLINE':'OFFLINE'}</b> · SYNCED ${agoTxt}</span><span><b>${nodes}</b> NODES</span>`;
+}
+function tick(){
+  const now = new Date();
+  $('clock').innerHTML = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now) + '<small>SGT</small>';
+  renderRace();
+}
+renderTop(); tick(); setInterval(tick, 1000);
+
+/* =========================================================
+   LONGEST-RUN CALLOUT
+   ========================================================= */
+(function(){
+  const c = $('callout');
+  if (!LONGEST){ c.style.display='none'; return; }
+  c.innerHTML = `<div class="t">◎ LONGEST RUN</div><div class="n">${esc(LONGEST.name)}</div><div class="dt">${fmtDY(LONGEST.date)}</div>
+    <div class="m"><div>DISTANCE<b>${LONGEST.km.toFixed(2)} km</b></div><div>TIME<b>${LONGEST.hrs.toFixed(2)} h</b></div></div>`;
+})();
+
+/* =========================================================
+   3D GRAPH
+   ========================================================= */
+function rng(seed){ let a = seed>>>0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1|a); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14)>>>0)/4294967296; }; }
+const norm = v => { const l = Math.hypot(v[0],v[1],v[2]) || 1; return [v[0]/l, v[1]/l, v[2]/l]; };
+const TURNS = 3.4;
+function weekPos(i){
+  const t = WEEKS.length>1 ? i/(WEEKS.length-1) : .5, phi = Math.PI*(0.1+0.8*t), th = t*TURNS*TAU;
+  return [Math.sin(phi)*Math.cos(th), -Math.cos(phi), Math.sin(phi)*Math.sin(th)];
+}
+const MAXDUR = Math.max(1, ...ACT.map(a=>a.dur));
+const NODES = [];
+WEEKS.forEach(w => { w.pos = weekPos(w.idx);
+  NODES.push({kind:'week', w, pos:w.pos, base:2.4+Math.min(3,w.acts.length*.5), color:'#ffe9a8', sport:null}); });
+ACT.forEach(a => {
+  const r = rng(a.id % 4294967296), wp = a.week.pos;
+  let j = [r()*2-1, r()*2-1, r()*2-1]; const dot = j[0]*wp[0]+j[1]*wp[1]+j[2]*wp[2]; j = j.map((x,i)=>x-dot*wp[i]);
+  const jn = norm(j), spread = .08 + r()*.16, rad = 1 + (r()-.5)*.12;
+  const p = norm([wp[0]+jn[0]*spread, wp[1]+jn[1]*spread, wp[2]+jn[2]*spread]).map(x=>x*rad);
+  a.node = {kind:'act', a, pos:p, base:1.8+7.2*Math.sqrt(a.dur/MAXDUR), color:SPORT[a.sport].color, sport:a.sport};
+  NODES.push(a.node);
+});
+const WW_ARCS = [];
+for (let i=0;i<WEEKS.length-1;i++){
+  const a = WEEKS[i].pos, b = WEEKS[i+1].pos, pts = [];
+  for (let s=0;s<=8;s++){ const t=s/8; pts.push(norm([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t])); }
+  WW_ARCS.push(pts);
+}
+/* sphere guides */
+const GUIDES = [];
+for (let k=1;k<=5;k++){ const phi=Math.PI*k/6, ring=[]; for(let s=0;s<=64;s++){ const th=s/64*TAU; ring.push([Math.sin(phi)*Math.cos(th), -Math.cos(phi), Math.sin(phi)*Math.sin(th)]); } GUIDES.push(ring); }
+for (let k=0;k<8;k++){ const th=k/8*Math.PI, ring=[]; for(let s=0;s<=64;s++){ const phi=s/64*TAU; ring.push([Math.sin(phi)*Math.cos(th), -Math.cos(phi), Math.sin(phi)*Math.sin(th)]); } GUIDES.push(ring); }
+
+/* glow sprites */
+const hexA = (h,a) => { const n=parseInt(h.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
+function sprite(color){
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0, hexA(color,1)); g.addColorStop(.18, hexA(color,.7)); g.addColorStop(.5, hexA(color,.16)); g.addColorStop(1, hexA(color,0));
+  x.fillStyle = g; x.fillRect(0,0,64,64); return c;
+}
+const SPR = {}; Object.values(SPORT).forEach(s=>SPR[s.color]=sprite(s.color)); SPR['#ffe9a8']=sprite('#ffe9a8'); SPR.core=sprite('#ffcc4d'); SPR.hot=sprite('#fff6d6');
+
+/* state */
+const cv = $('g'), gx = cv.getContext('2d'), center = $('center');
+let GW=0, GH=0, DPR=1;
+const cam = {yaw:.6, pitch:.38, zoom:1, dragging:false, lastX:0, lastY:0, idleAt:0};
+const mouse = {x:-1,y:-1,in:false};
+let query = '', hidden = new Set(), hover = null, anchor = {x:0,y:0};
+
+function resize(){
+  DPR = Math.min(2, devicePixelRatio||1);
+  const r = center.getBoundingClientRect(); GW = Math.max(200, r.width); GH = Math.max(200, r.height);
+  cv.width = GW*DPR; cv.height = GH*DPR; gx.setTransform(DPR,0,0,DPR,0,0);
+  const c = $('callout').getBoundingClientRect();
+  anchor = {x:c.left-r.left, y:c.bottom-r.top};
+  requestRender();
+}
+new ResizeObserver(resize).observe(center);
+
+function matches(n){
+  if (n.sport && hidden.has(n.sport)) return false;
+  if (!query) return true;
+  if (n.kind==='act'){ const a=n.a; return (`${a.name} ${a.date} ${fmtD(a.date)} ${SPORT[a.sport].label} ${a.type}`).toLowerCase().includes(query); }
+  return n.w.acts.some(a=>a.node._m);
+}
+function refilter(){
+  let m = 0; NODES.forEach(n=>{ if(n.kind==='act'){ n._m = matches(n); if(n._m) m++; } });
+  NODES.forEach(n=>{ if(n.kind==='week') n._m = n.w.acts.length ? n.w.acts.some(a=>a.node._m) : !query; });
+  $('qc').textContent = query || hidden.size ? `${m} of ${ACT.length} activities shown` : '';
+  requestRender();
+}
+$('q').addEventListener('input', e=>{ query = e.target.value.trim().toLowerCase(); refilter(); });
+$('legend').addEventListener('click', e=>{
+  const b = e.target.closest('.lg'); if (!b) return; const k = b.dataset.k;
+  hidden.has(k) ? hidden.delete(k) : hidden.add(k); b.setAttribute('aria-pressed', !hidden.has(k)); refilter();
+});
+
+/* interaction */
+cv.addEventListener('pointerdown', e=>{ cam.dragging = true; cam.lastX = e.clientX; cam.lastY = e.clientY; cv.classList.add('drag'); cv.setPointerCapture(e.pointerId); $('tip').style.opacity = 0; });
+cv.addEventListener('pointermove', e=>{
+  const r = cv.getBoundingClientRect(); mouse.x = e.clientX-r.left; mouse.y = e.clientY-r.top; mouse.in = true;
+  if (cam.dragging){
+    cam.yaw += (e.clientX-cam.lastX)*.006; cam.pitch = Math.max(-1.2, Math.min(1.2, cam.pitch + (e.clientY-cam.lastY)*.004));
+    cam.lastX = e.clientX; cam.lastY = e.clientY; cam.idleAt = performance.now();
+  }
+  requestRender();
+});
+const endDrag = () => { cam.dragging = false; cv.classList.remove('drag'); cam.idleAt = performance.now(); };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('pointerleave', ()=>{ mouse.in = false; hover = null; $('tip').style.opacity = 0; requestRender(); });
+cv.addEventListener('wheel', e=>{ e.preventDefault(); cam.zoom = Math.max(.6, Math.min(2, cam.zoom*(e.deltaY>0?.93:1.07))); requestRender(); }, {passive:false});
+
+function project(n, ca, sa, cp, sp, cx, cy, R){
+  const p = n.pos, x1 = p[0]*ca + p[2]*sa, z1 = -p[0]*sa + p[2]*ca, y2 = p[1]*cp - z1*sp, z2 = p[1]*sp + z1*cp;
+  const s = 3/(3+z2); n.x = cx + x1*s*R; n.y = cy + y2*s*R; n.z = z2; n.s = s;
+}
+const projPt = (p, ca, sa, cp, sp, cx, cy, R) => { const x1 = p[0]*ca + p[2]*sa, z1 = -p[0]*sa + p[2]*ca, y2 = p[1]*cp - z1*sp, z2 = p[1]*sp + z1*cp, s = 3/(3+z2); return [cx + x1*s*R, cy + y2*s*R, z2]; };
+const depthA = z => Math.max(.18, Math.min(1, 1 - .62*(z+1)/2));
+
+function drawGraph(t){
+  const g = gx; g.clearRect(0,0,GW,GH);
+  const cx = GW/2, cy = GH*.44, R = Math.min(GW*.42, GH*.4)*cam.zoom*1.02;
+  const ca = Math.cos(cam.yaw), sa = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const unit = Math.max(.7, Math.min(1.5, R/260));
+  NODES.forEach(n=>project(n, ca, sa, cp, sp, cx, cy, R));
+
+  // sphere guides
+  g.lineWidth = 1; g.strokeStyle = 'rgba(255,204,77,.07)';
+  GUIDES.forEach(ring=>{ g.beginPath(); ring.forEach((p,i)=>{ const q = projPt(p, ca,sa,cp,sp,cx,cy,R); i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); g.stroke(); });
+
+  g.globalCompositeOperation = 'lighter';
+  // activity → week links
+  ACT.forEach(a=>{
+    const n = a.node, w = a.week; if (!w) return;
+    const wn = NODES[w.idx], on = n._m !== false && wn._m !== false;
+    g.strokeStyle = hexA(n.color, (on?.34:.04) * depthA((n.z+wn.z)/2)); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(n.x,n.y); g.lineTo(wn.x,wn.y); g.stroke();
+  });
+  // week → week spiral
+  WW_ARCS.forEach((pts,i)=>{
+    const on = NODES[i]._m !== false && NODES[i+1]._m !== false;
+    g.beginPath(); let zs = 0;
+    pts.forEach((p,k)=>{ const q = projPt(p, ca,sa,cp,sp,cx,cy,R); zs += q[2]; k?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); });
+    g.strokeStyle = `rgba(255,214,120,${(on?.62:.08)*depthA(zs/pts.length)})`; g.lineWidth = 1.6; g.stroke();
+  });
+
+  // nodes + core, back to front
+  const pulse = REDUCED ? 0 : Math.sin(t/900);
+  const list = NODES.slice().sort((a,b)=>b.z-a.z); let coreDone = false;
+  const drawCore = () => {
+    const rr = R*(.78 + .05*pulse);
+    g.globalAlpha = .9; g.drawImage(SPR.core, cx-rr, cy-rr, rr*2, rr*2);
+    const hh = R*(.2 + .02*pulse); g.globalAlpha = 1; g.drawImage(SPR.hot, cx-hh, cy-hh, hh*2, hh*2);
+  };
+  hover = null; let best = 1e9;
+  for (const n of list){
+    if (!coreDone && n.z < 0){ drawCore(); coreDone = true; }
+    const dim = n._m === false ? .1 : 1, a = depthA(n.z)*dim, r = n.base*n.s*unit;
+    if (mouse.in && !cam.dragging && dim===1){ const d = Math.hypot(mouse.x-n.x, mouse.y-n.y); if (d < Math.max(r*1.6, 9) && d < best){ best = d; hover = n; } }
+    const gl = r*(n===hover?5:3.4);
+    g.globalAlpha = Math.min(1,a); g.drawImage(SPR[n.color], n.x-gl, n.y-gl, gl*2, gl*2);
+    g.globalAlpha = Math.min(1,a*1.1); g.fillStyle = n.color; g.beginPath(); g.arc(n.x, n.y, Math.max(1,r*.52), 0, TAU); g.fill();
+  }
+  if (!coreDone) drawCore();
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+
+  // ring + leader on the longest run
+  if (LONGEST){
+    const n = LONGEST.node, rr = n.base*n.s*unit*1.9 + 7, k = REDUCED ? 0 : (t/1100)%1;
+    g.strokeStyle = '#ffcc4d'; g.lineWidth = 2; g.shadowColor = '#ffcc4d'; g.shadowBlur = 12;
+    g.beginPath(); g.arc(n.x, n.y, rr, 0, TAU); g.stroke();
+    g.shadowBlur = 0; g.strokeStyle = `rgba(255,204,77,${1-k})`; g.lineWidth = 1.2;
+    g.beginPath(); g.arc(n.x, n.y, rr + k*16, 0, TAU); g.stroke();
+    const dx = anchor.x - n.x, dy = anchor.y - n.y, L = Math.hypot(dx,dy) || 1;
+    g.strokeStyle = 'rgba(255,204,77,.6)'; g.lineWidth = 1; g.setLineDash([4,4]);
+    g.beginPath(); g.moveTo(n.x + dx/L*rr, n.y + dy/L*rr); g.lineTo(anchor.x, anchor.y); g.stroke(); g.setLineDash([]);
+  }
+
+  // tooltip
+  const tip = $('tip');
+  if (hover && mouse.in){
+    let h;
+    if (hover.kind==='act'){ const a = hover.a; h = `<b>${esc(a.name)}</b><br>${fmtDY(a.date)} · ${SPORT[a.sport].label}<br>${a.km>0?a.km.toFixed(2)+' km · ':''}${a.hrs.toFixed(2)} h${a.load!=null?' · load '+Math.round(a.load):''}`; }
+    else { const w = hover.w; h = `<b>WEEK OF ${fmtDY(w.key)}</b><br>${w.acts.length} session${w.acts.length===1?'':'s'} · ${w.km.toFixed(1)} km run · ${w.hrs.toFixed(1)} h`; }
+    tip.innerHTML = h; const r = cv.getBoundingClientRect();
+    tip.style.left = Math.min(r.left+mouse.x+14, innerWidth-250)+'px'; tip.style.top = (r.top+mouse.y+14)+'px'; tip.style.opacity = 1; cv.style.cursor = 'pointer';
+  } else { tip.style.opacity = 0; cv.style.cursor = cam.dragging ? 'grabbing' : 'grab'; }
+}
+
+/* ---------- background: stars + perspective grid floor ---------- */
+const bgc = $('bg'), bx = bgc.getContext('2d'); let BW=0, BH=0;
+const STARS = Array.from({length:230}, (_,i)=>{ const r = rng(i*977+13); return {x:r(), y:r()*.72, a:.25+r()*.6, s:r()<.12?1.7:1, sp:.0006+r()*.0018, ph:r()*TAU, c:r()<.18?'#ffd98a':r()<.4?'#c9b6ff':'#ffffff'}; });
+function resizeBg(){ const d = Math.min(2, devicePixelRatio||1); BW = innerWidth; BH = innerHeight; bgc.width = BW*d; bgc.height = BH*d; bx.setTransform(d,0,0,d,0,0); requestRender(); }
+addEventListener('resize', resizeBg);
+function drawBg(t){
+  const g = bx, hy = BH*.68, vx = BW/2; g.clearRect(0,0,BW,BH);
+  STARS.forEach(s=>{ g.globalAlpha = s.a*(REDUCED ? 1 : .65+.35*Math.sin(t*s.sp+s.ph)); g.fillStyle = s.c; g.fillRect(s.x*BW, s.y*BH, s.s, s.s); });
+  g.globalAlpha = 1;
+  const glow = g.createLinearGradient(0, hy-90, 0, hy+60);
+  glow.addColorStop(0,'rgba(140,70,255,0)'); glow.addColorStop(.6,'rgba(150,80,255,.2)'); glow.addColorStop(1,'rgba(150,80,255,0)');
+  g.fillStyle = glow; g.fillRect(0, hy-90, BW, 150);
+  const vg = g.createLinearGradient(0,hy,0,BH); vg.addColorStop(0,'rgba(190,140,255,0)'); vg.addColorStop(1,'rgba(190,140,255,.42)');
+  g.strokeStyle = vg; g.lineWidth = 1; g.beginPath();
+  const step = BW*.1; for (let i=-24;i<=24;i++){ g.moveTo(vx, hy); g.lineTo(vx + i*step, BH); }
+  g.stroke();
+  const off = REDUCED ? 0 : (t*.00022)%1, N = 18;
+  for (let k=0;k<N;k++){
+    const tt = ((k+off)/N), y = hy + (BH-hy)*Math.pow(tt,2.3);
+    g.strokeStyle = `rgba(${k%4===0?'255,204,77':'190,140,255'},${(.04+.34*tt)*(k%4===0?.8:1)})`;
+    g.beginPath(); g.moveTo(0,y); g.lineTo(BW,y); g.stroke();
+  }
+  g.strokeStyle = 'rgba(255,204,77,.28)'; g.beginPath(); g.moveTo(0,hy); g.lineTo(BW,hy); g.stroke();
+}
+
+/* ---------- loop ---------- */
+let raf = 0, pending = false;
+function frame(t){
+  raf = 0; pending = false;
+  if (!REDUCED && !cam.dragging && t - cam.idleAt > 2500) cam.yaw += .0016;
+  drawBg(t); drawGraph(t);
+  if (!REDUCED) requestRender();
+}
+function requestRender(){ if (!raf) raf = requestAnimationFrame(frame); }
+resizeBg(); resize(); refilter(); requestRender();
+
+/* =========================================================
+   COMMAND DECK + OS CONSOLE (everything runs locally on the data above)
+   ========================================================= */
+const term = $('term'), tb = $('tb'); let session = 1;
+const say = (txt, cls='') => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = txt; tb.appendChild(d); tb.scrollTop = tb.scrollHeight; };
+const TAG = {g:['OK   ','ok'], a:['WATCH','warn'], r:['ALERT','bad'], n:['N/A  ','dim']};
+const worstLvl = () => V.some(v=>v.lvl==='r') ? 'r' : V.some(v=>v.lvl==='a') ? 'a' : 'g';
+function planText(){
+  const w = worstLvl();
+  const session = w==='r' ? 'Easy aerobic, Zone 1–2, 30–40 min, or a rest day' : w==='a' ? 'Steady aerobic, cap at Zone 2, stop early if it feels heavy' : 'Planned session as scheduled';
+  return {w, session, watch: w==='r' ? 'Easy aerobic · Zone 1–2 · 40 min' : w==='a' ? 'Steady aerobic · cap Zone 2' : 'No change to the planned workout'};
+}
+const plain = h => h.replace(/<[^>]+>/g,'');
+function copy(text){ return navigator.clipboard ? navigator.clipboard.writeText(text).then(()=>true,()=>false) : Promise.resolve(false); }
+
+const SK = {
+  recovery(){
+    say('RECOVERY CHECK','hd');
+    V.filter(v=>v.key!=='km').forEach(v=>{ const [t,c] = TAG[v.lvl]; say(`[${t}] ${v.label.padEnd(16)} ${v.val}  ${v.x}`, c); });
+    const w = worstLvl();
+    say(w==='r' ? 'VERDICT  Not recovered. Keep today easy or rest.' : w==='a' ? 'VERDICT  Mostly recovered with flags. Easy to steady only.' : 'VERDICT  Recovered. Go as planned.', w==='r'?'bad':w==='a'?'warn':'ok');
+  },
+  plan(){
+    const p = planText(); say("TODAY'S PLAN",'hd');
+    say(`Session        ${p.session}`, p.w==='r'?'bad':p.w==='a'?'warn':'ok');
+    DIRS.forEach((d,i)=>say(`Directive ${i+1}    ${plain(d.t)}`));
+    say(`Watch workout  ${p.watch}`,'dim'); say('Run "watch" to copy it for your watch.','dim');
+  },
+  watch(){
+    const p = planText(), txt = `Today's plan: ${p.session}. Watch workout: ${p.watch}.`;
+    say('SEND TO WATCH','hd'); say(txt);
+    copy(txt).then(ok=>say(`Garmin workout push isn't connected yet.${ok?' The plan was copied to your clipboard instead.':' Copy the line above by hand.'}`,'warn'));
+  },
+  race(){
+    say('RACE WEEK','hd');
+    if (!RACE){ say('No goal race set. Use "set race" in the North Star panel, then run this again.','warn'); return; }
+    const d = raceDays(), nm = RACE.name||'Goal race';
+    say(`${nm} · ${fmtDY(RACE.date)} · ${RACE.time||'06:00'} SGT`);
+    if (d<0){ say(`The race was ${-d} day${d===-1?'':'s'} ago.`,'dim'); return; }
+    say(`${d} day${d===1?'':'s'} out.`, 'ok');
+    const phase = d>14 ? 'BUILD: keep the weekly rhythm, protect sleep, add nothing new.' : d>7 ? 'SHARPEN: hold quality, trim total volume, rehearse race-day fuel.' : d>2 ? 'TAPER: short and easy, a couple of brief race-pace touches, sleep first.' : 'RACE WEEK: rest, hydrate, lay kit out, no new food or shoes.';
+    say(phase,'warn');
+    say(`Form is ${fx(FORM,0)} now; a taper should lift it${FORM<-20?' from this deep hole':''}.`,'dim');
+  },
+  recap(){
+    const inR = (a,b) => ACT.filter(x=>x.date>=a && x.date<=b), s7 = addDays(TODAY,-6), p7 = addDays(TODAY,-13), pe = addDays(TODAY,-7);
+    const A = inR(s7,TODAY), B = inR(p7,pe), km = l => sum(l.filter(x=>x.sport==='run').map(x=>x.km)), hr = l => sum(l.map(x=>x.hrs)), ld = l => sum(l.map(x=>x.load||0));
+    const arr = (n,o) => o>0 ? ` (${n>=o?'+':'−'}${Math.abs(Math.round((n/o-1)*100))}% vs prior 7 days)` : '';
+    say(`WEEKLY RECAP · ${fmtD(s7)} – ${fmtD(TODAY)}`,'hd');
+    say(`Sessions  ${A.length}${arr(A.length,B.length)}`); say(`Run km    ${km(A).toFixed(1)}${arr(km(A),km(B))}`);
+    say(`Hours     ${hr(A).toFixed(1)}${arr(hr(A),hr(B))}`); say(`Load      ${Math.round(ld(A))}${arr(ld(A),ld(B))}`);
+    const lr = A.filter(x=>x.sport==='run').sort((x,y)=>y.dist-x.dist)[0]; if (lr) say(`Long run  ${lr.km.toFixed(2)} km on ${fmtD(lr.date)}`);
+    const bad = V.filter(v=>v.lvl==='r'||v.lvl==='a').length; say(`Flags     ${bad} of ${V.length} vitals outside range`, bad?'warn':'ok');
+  },
+  coach(){
+    const lines = [`Hi coach, status check:`, ...V.map(v=>`- ${v.label.toLowerCase()}: ${v.val} (${v.x})`), `Top priority today: ${plain(DIRS[0].t)}`, `What should I change?`];
+    say('ASK MY COACH','hd'); lines.forEach(l=>say(l));
+    copy(lines.join('\n')).then(ok=>say(ok?'Message copied to your clipboard. Paste it to your coach.':'Copy the message above and send it to your coach.', ok?'ok':'warn'));
+  },
+  help(){ say('COMMANDS','hd'); say('recovery · plan · watch · race · recap · coach · clear · help'); say('These run on your Garmin data in this file. They are not a language model.','dim'); },
+  clear(){ tb.innerHTML=''; },
+};
+const ALIAS = {recovery:'recovery',recover:'recovery',check:'recovery',plan:'plan',today:'plan',watch:'watch',send:'watch',race:'race',recap:'recap',week:'recap',weekly:'recap',coach:'coach',ask:'coach',help:'help','?':'help',clear:'clear',cls:'clear'};
+function run(key, echoText){ term.classList.add('on'); say('> ' + (echoText||key), 'echo'); SK[key](); }
+$('deck').addEventListener('click', e=>{ const b = e.target.closest('.sk'); if (b) run(b.dataset.sk); });
+$('tform').addEventListener('submit', e=>{
+  e.preventDefault(); const raw = $('tcmd').value.trim(); $('tcmd').value=''; if (!raw) return;
+  const key = ALIAS[raw.toLowerCase().split(/\s+/)[0]];
+  if (key==='clear'){ SK.clear(); return; }
+  if (key) run(key, raw); else { say('> '+raw,'echo'); say(`No skill matches "${raw}". Try: recovery · plan · watch · race · recap · coach · help`,'warn'); }
+});
+$('term-x').onclick = () => term.classList.remove('on');
+function newChat(){ session++; term.classList.add('on'); tb.innerHTML=''; $('term-title').textContent = `OS CONSOLE · CHAT #${session}`; say(`New OS chat #${session}. Type a command, or press a skill. "help" lists them.`,'dim'); $('tcmd').focus(); }
+$('newchat').onclick = newChat;
+$('term-title').textContent = 'OS CONSOLE · CHAT #1';
+</script>
+
+<style>
+#__rf{position:fixed;right:14px;bottom:14px;z-index:2147483000;display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.12em}
+#__rf button{cursor:pointer;color:#22e5ff;background:rgba(8,12,20,.9);border:1px solid #22e5ff;padding:8px 13px;border-radius:999px;font:inherit}
+#__rf button:hover:not(:disabled){box-shadow:0 0 12px rgba(34,229,255,.55)}
+#__rf button:disabled{opacity:.65;cursor:progress}
+#__rf button.err{color:#ff4d6d;border-color:#ff4d6d}
+#__rf span{display:none;max-width:260px;color:#ffb020;background:rgba(8,12,20,.92);padding:5px 9px;border-radius:6px;letter-spacing:.04em;font-weight:500}
+</style>
+<div id="__rf"><span id="__rfs"></span><button id="__rfb" type="button">↻ REFRESH</button></div>
+<script>
+(function(){
+  var btn=document.getElementById('__rfb'), st=document.getElementById('__rfs');
+  var local=location.protocol==='file:', dev=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  if(!local&&!dev){ btn.textContent='↻ RELOAD'; btn.title='Reload the latest published data'; }
+  if(local){ btn.title='Run "python serve.py" to enable refresh'; }
+  function say(t,title){ st.textContent=t; st.title=title||''; st.style.display=t?'block':'none'; }
+  btn.addEventListener('click', async function(){
+    if(local){ say('START: python serve.py'); return; }
+    if(!dev){ location.reload(); return; }
+    btn.disabled=true; btn.classList.remove('err'); btn.textContent='PULLING…'; say('0s');
+    var t0=Date.now(), tick=setInterval(function(){ say(Math.round((Date.now()-t0)/1000)+'s'); },1000);
+    try{
+      var r=await fetch('/refresh',{method:'POST',headers:{'X-Commander':'1'}});
+      var j=await r.json().catch(function(){return {ok:false,log:'HTTP '+r.status}});
+      if(!j.ok) throw new Error(j.log||('HTTP '+r.status));
+      clearInterval(tick); btn.textContent='✓ DONE'; location.reload();
+    }catch(e){
+      clearInterval(tick); btn.disabled=false; btn.classList.add('err'); btn.textContent='↻ RETRY';
+      var m=String(e.message||e).trim().split('\n').filter(Boolean).slice(-1)[0]||'failed';
+      say(m.slice(0,140), String(e.message||e));
+    }
+  });
+})();
+</script>
+</body>
+</html>

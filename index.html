@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Garmin dashboards</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;min-height:100vh;background:#070b12;color:#d7e4f0;font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    display:grid;place-items:center;padding:32px}
+  main{max-width:760px;width:100%}
+  h1{font-size:18px;letter-spacing:.24em;margin:0 0 6px}
+  p{color:#7f93a8;margin:0 0 22px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  a.card{display:block;padding:16px 18px;border:1px solid #1b2a3c;background:#0c1420;color:inherit;text-decoration:none;border-radius:10px}
+  a.card:hover{border-color:#22e5ff;box-shadow:0 0 16px rgba(34,229,255,.25)}
+  a.card b{display:block;color:#22e5ff;letter-spacing:.14em;margin-bottom:4px}
+  a.card span{color:#7f93a8;font-size:13px}
+  small{display:block;margin-top:22px;color:#52667c}
+  code{color:#ffb020}
+</style>
+</head>
+<body>
+<main>
+  <h1>GARMIN DASHBOARDS</h1>
+  <p>Pick a view. Each page has a refresh button in the corner.</p>
+  <div class="grid">
+    <a class="card" href="commander.html"><b>COMMANDER</b><span>Mission control: vitals, form chart, weekly km</span></a>
+    <a class="card" href="coach.html"><b>COACH</b><span>Flags, drafted note, volume and intensity</span></a>
+    <a class="card" href="tinkerer.html"><b>TINKERER</b><span>Run explorer: pace vs heart rate</span></a>
+    <a class="card" href="brain.html"><b>BRAIN</b><span>Your training as a 3D graph</span></a>
+  </div>
+  <small>Refresh needs <code>python serve.py</code> running locally. Hosted copies reload the last published data.</small>
+</main>
+</body>
+</html>
