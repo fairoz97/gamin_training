@@ -1,0 +1,59 @@
+# OPTIONAL. Publishes the dashboards to GitHub Pages.
+#
+# WARNING: a GitHub Pages site is PUBLIC to anyone with the link (even from a private repo,
+# unless your organisation is on GitHub Enterprise Cloud). The built pages embed your heart rate,
+# HRV, sleep and activity history. Only enable this if you are happy with that.
+#
+# To use it: repo Settings > Pages > Source: "GitHub Actions"; add a repository secret named
+# GARMIN_PERSONAL_API_KEY; then run this workflow once from the Actions tab. After that it runs daily.
+# (GitHub pauses scheduled runs on public repos after ~60 days without repo activity: re-enable in Actions.)
+name: Build and publish dashboards
+
+on:
+  workflow_dispatch:           # run it by hand from the Actions tab
+  schedule:
+    - cron: "0 22 * * *"       # daily at 06:00 Singapore time (22:00 UTC)
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Pull Garmin data
+        run: python pull.py
+        env:
+          GARMIN_PERSONAL_API_KEY: ${{ secrets.GARMIN_PERSONAL_API_KEY }}
+      - name: Build dashboards into docs/
+        run: python publish_site.py
+        env:
+          # optional repository variables (Settings > Secrets and variables > Actions > Variables)
+          RACE_DATE: ${{ vars.RACE_DATE }}
+          RACE_NAME: ${{ vars.RACE_NAME }}
+          RACE_TIME: ${{ vars.RACE_TIME }}
+          FIRST_NAME: ${{ vars.FIRST_NAME }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
